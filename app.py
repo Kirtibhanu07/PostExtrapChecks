@@ -4,7 +4,6 @@ Run: streamlit run app.py
 """
 
 import re
-
 import io
 import time
 import streamlit as st
@@ -31,34 +30,8 @@ st.set_page_config(
 
 
 def _html(content: str) -> None:
-    """
-    Render raw HTML safely, immune to Streamlit's Markdown pre-pass.
-
-    Streamlit runs every st.markdown() call through a CommonMark parser
-    before it ever looks at unsafe_allow_html. Two CommonMark rules bite
-    hand-built, multi-line HTML f-strings:
-
-      1. A line indented 4+ spaces is read as a literal code block.
-      2. A blank line (even one that's only whitespace) ends an "HTML
-         block" early, kicking whatever comes after back out into plain
-         Markdown — which is exactly how rule 1 gets triggered even in
-         code that looks correctly indented, because nesting one f-string
-         inside another (e.g. a `log_content` variable built on its own
-         then interpolated into a parent template) creates a line that's
-         nothing but the outer template's leading spaces followed
-         immediately by the inner string's own leading newline. That
-         reads as a blank line to the parser, even though it isn't blank
-         in the source.
-
-    textwrap.dedent() only strips whitespace common to every line, so it
-    cannot fix nested indentation like this, and doesn't touch blank
-    lines at all — collapsing the whole fragment onto a single line is
-    the only fix that removes both failure modes at once, regardless of
-    how deeply the call is nested or how the string was assembled.
-    """
     flat = re.sub(r"\s*\n\s*", " ", content).strip()
     st.markdown(flat, unsafe_allow_html=True)
-
 
 
 # ── CSS ───────────────────────────────────────────────────────────────────────
@@ -67,7 +40,7 @@ _html("""
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&display=swap');
 
-/* ═══ NIELSEN TOKENS (2021 brand refresh: violet/midnight, not red) ═══ */
+/* ═══ NIELSEN TOKENS ═══ */
 :root {
     --n-violet:       #6E37FA;
     --n-violet-dark:  #5324D9;
@@ -87,7 +60,7 @@ _html("""
     --n-fail-wash:    #FDF1F2;
     --n-warn:         #C9821E;
     --n-warn-wash:    #FDF6EA;
-    --n-maxw:         1140px;
+    --n-maxw:         1280px; /* Expanded for less crampness */
 }
 
 /* ═══ RESET ═══ */
@@ -109,54 +82,55 @@ html, body,
 [data-testid="stDecoration"],
 footer, #MainMenu { display: none !important; }
 
-[data-testid="stHorizontalBlock"] { gap: 20px !important; align-items: stretch !important; }
+[data-testid="stHorizontalBlock"] { gap: 24px !important; align-items: stretch !important; }
 [data-testid="column"] { padding: 0 !important; }
 [data-testid="stVerticalBlock"] { gap: 0 !important; }
 
 [data-testid="stAppViewContainer"] > .main .block-container {
-    padding: 0 0 56px !important;
+    padding: 0 0 80px !important;
 }
 
-/* Every direct content section is centered and capped, like a real product page */
-.n-shell { max-width: var(--n-maxw); margin: 0 auto; padding: 0 40px; }
+.n-shell { max-width: var(--n-maxw); margin: 0 auto; padding: 0 48px; }
 
 /* ═══ TOPBAR ═══ */
 .n-topbar-outer {
     background: linear-gradient(100deg, var(--n-midnight) 0%, var(--n-midnight-2) 100%);
     border-bottom: 3px solid var(--n-violet);
-    margin-bottom: 44px;
+    margin-bottom: 56px;
+    box-shadow: 0 4px 16px rgba(0,32,65,0.08);
 }
 
 .n-topbar {
     max-width: var(--n-maxw);
     margin: 0 auto;
-    height: 76px;
+    height: 84px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 40px;
+    padding: 0 48px;
 }
 
-.n-topbar-left { display: flex; align-items: center; gap: 16px; }
+.n-topbar-left { display: flex; align-items: center; gap: 18px; }
 
 .n-mark {
-    width: 34px; height: 34px;
-    border-radius: 9px;
+    width: 38px; height: 38px;
+    border-radius: 10px;
     background: var(--n-violet);
     display: flex; align-items: center; justify-content: center;
     font-family: 'Fraunces', serif;
     font-style: italic;
     font-weight: 700;
-    font-size: 17px;
+    font-size: 19px;
     color: #FFFFFF;
     flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(110,55,250,0.4);
 }
 
-.n-topbar-text { display: flex; flex-direction: column; gap: 2px; }
+.n-topbar-text { display: flex; flex-direction: column; gap: 3px; }
 
 .n-wordmark {
     font-family: 'Fraunces', serif;
-    font-size: 17px;
+    font-size: 19px;
     font-weight: 600;
     font-style: italic;
     color: #FFFFFF;
@@ -164,35 +138,35 @@ footer, #MainMenu { display: none !important; }
     line-height: 1;
 }
 
-.n-app-name { font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.6); letter-spacing: 0.01em; }
+.n-app-name { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.65); letter-spacing: 0.01em; }
 
 .n-version {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 600;
     color: #FFFFFF;
     font-family: 'Inter', monospace;
     background: rgba(110,55,250,0.35);
     border: 1px solid rgba(110,55,250,0.6);
-    padding: 5px 12px;
+    padding: 6px 14px;
     border-radius: 20px;
 }
 
-/* ═══ SECTION HEADER (numbered step) ═══ */
+/* ═══ SECTION HEADER ═══ */
 .n-step-head {
     display: flex;
     align-items: baseline;
-    gap: 14px;
-    margin-bottom: 18px;
+    gap: 16px;
+    margin-bottom: 20px;
 }
 
 .n-step-num {
     font-family: 'Fraunces', serif;
     font-style: italic;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: var(--n-violet);
     background: var(--n-violet-wash);
-    width: 26px; height: 26px;
+    width: 28px; height: 28px;
     border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
@@ -201,67 +175,65 @@ footer, #MainMenu { display: none !important; }
 
 .n-step-title {
     font-family: 'Fraunces', serif;
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 500;
     color: var(--n-ink);
 }
 
-.n-step-sub { font-size: 12.5px; color: var(--n-ink-faint); margin-left: 40px; margin-top: -12px; margin-bottom: 20px; }
+.n-step-sub { font-size: 13.5px; color: var(--n-ink-faint); margin-left: 44px; margin-top: -14px; margin-bottom: 28px; }
 
-.n-section { margin-bottom: 40px; }
+.n-section { margin-bottom: 56px; }
 
 /* ═══ UPLOAD GRID ═══ */
 .n-upload-card {
     background: var(--n-panel);
     border: 1px solid var(--n-line);
-    border-radius: 12px;
-    padding: 16px 16px 14px;
+    border-radius: 16px;
+    padding: 22px;
     height: 100%;
     display: flex;
     flex-direction: column;
     transition: border-color 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 16px rgba(32,28,44,0.02);
 }
 
-.n-upload-card.is-loaded { border-color: rgba(31,157,108,0.35); box-shadow: 0 2px 8px rgba(31,157,108,0.07); }
+.n-upload-card.is-loaded { 
+    border-color: rgba(31,157,108,0.4); 
+    box-shadow: 0 4px 20px rgba(31,157,108,0.08); 
+}
 
 .n-upload-card-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
-.n-upload-name { font-size: 13px; font-weight: 700; color: var(--n-ink); }
-.n-upload-hint { font-size: 10.5px; color: var(--n-ink-faint); font-family: 'Inter', monospace; margin-bottom: 10px; }
+.n-upload-name { font-size: 14px; font-weight: 700; color: var(--n-ink); }
+.n-upload-hint { font-size: 11.5px; color: var(--n-ink-faint); font-family: 'Inter', monospace; margin-bottom: 14px; }
 
-.n-upload-dot { width: 7px; height: 7px; border-radius: 50%; background: #E4E1EC; flex-shrink: 0; }
-.n-upload-dot.loaded { background: var(--n-good); box-shadow: 0 0 0 3px rgba(31,157,108,0.15); }
+.n-upload-dot { width: 8px; height: 8px; border-radius: 50%; background: #E4E1EC; flex-shrink: 0; }
+.n-upload-dot.loaded { background: var(--n-good); box-shadow: 0 0 0 4px rgba(31,157,108,0.15); }
 
 .n-upload-status {
-    margin-top: 10px;
-    font-size: 11px;
+    margin-top: 14px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--n-ink-faint);
 }
 .n-upload-status.loaded { color: var(--n-good); }
 
-/* Compact uploader inside the card */
+/* Compact uploader */
 .n-upload-card [data-testid="stFileUploader"] { background: transparent !important; margin: 0 !important; padding: 0 !important; }
 .n-upload-card [data-testid="stFileUploader"] section { padding: 0 !important; }
 .n-upload-card [data-testid="stFileUploaderDropzoneInstructions"] { display: none !important; }
 
-/* Dropzone — cover both current and legacy Streamlit test-ids so styling
-   never silently fails to match on a different Streamlit version.
-   The whole dropzone area is natively clickable to open the file picker,
-   so we hide Streamlit's own "Browse files" button entirely below rather
-   than fight its cross-version markup/testids — one less thing that can
-   render as an unstyled box in front of executives. */
 [data-testid="stFileUploaderDropzone"],
 [data-testid="stFileUploader"] section {
     background: #FBFAF8 !important;
     border: 1.5px dashed #DDD7EE !important;
-    border-radius: 8px !important;
-    padding: 14px 12px !important;
+    border-radius: 10px !important;
+    padding: 24px 16px !important;
     min-height: unset !important;
     display: flex !important;
     align-items: center !important;
@@ -277,10 +249,8 @@ footer, #MainMenu { display: none !important; }
     background: var(--n-violet-wash) !important;
 }
 
-[data-testid="stFileUploaderFileName"] { color: var(--n-ink) !important; font-size: 10.5px !important; font-weight: 500 !important; }
+[data-testid="stFileUploaderFileName"] { color: var(--n-ink) !important; font-size: 11.5px !important; font-weight: 500 !important; }
 
-/* Hide Streamlit's native Browse button and any icon/instruction text —
-   the dropzone itself already opens the file picker on click. */
 .n-upload-card [data-testid="stFileUploader"] button,
 .n-upload-card [data-testid="stFileUploaderDropzone"] button,
 .n-upload-card [data-testid="baseButton-secondary"],
@@ -292,12 +262,10 @@ footer, #MainMenu { display: none !important; }
     pointer-events: none !important;
 }
 
-/* Our own deterministic label — pure CSS, cannot break across
-   Streamlit versions since it doesn't depend on matching their DOM */
 [data-testid="stFileUploaderDropzone"]::after,
 [data-testid="stFileUploader"] section::after {
     content: 'Click or drop .xlsx here';
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
     color: var(--n-ink-faint);
     pointer-events: none;
@@ -308,53 +276,52 @@ footer, #MainMenu { display: none !important; }
     color: var(--n-violet-dark);
 }
 
-/* Once a file is attached, Streamlit swaps the dropzone for a file-row —
-   don't show our upload prompt over an already-uploaded file's row */
 [data-testid="stFileUploaderFile"] ~ *::after,
 [data-testid="stFileUploaderDropzone"]:has([data-testid="stFileUploaderFile"])::after {
     content: '' !important;
 }
 
-/* ═══ ACTION ROW (progress + run button) ═══ */
+/* ═══ ACTION ROW ═══ */
 .n-action-row {
     display: flex;
     align-items: center;
-    gap: 28px;
+    gap: 36px;
     background: var(--n-panel);
     border: 1px solid var(--n-line);
-    border-radius: 14px;
-    padding: 22px 28px;
-    margin-top: 16px;
+    border-radius: 16px;
+    padding: 26px 36px;
+    margin-top: 24px;
+    box-shadow: 0 4px 16px rgba(32,28,44,0.02);
 }
 
 .n-action-progress { flex: 1; }
 
-.n-progress-track { height: 6px; background: var(--n-line-soft); border-radius: 4px; overflow: hidden; margin-bottom: 9px; }
-.n-progress-fill { height: 100%; background: linear-gradient(90deg, var(--n-violet), var(--n-violet-dark)); border-radius: 4px; transition: width 0.4s ease; }
-.n-progress-label { font-size: 12px; color: var(--n-ink-faint); font-weight: 500; }
+.n-progress-track { height: 8px; background: var(--n-line-soft); border-radius: 6px; overflow: hidden; margin-bottom: 12px; }
+.n-progress-fill { height: 100%; background: linear-gradient(90deg, var(--n-violet), var(--n-violet-dark)); border-radius: 6px; transition: width 0.4s ease; }
+.n-progress-label { font-size: 13.5px; color: var(--n-ink-faint); font-weight: 500; }
 .n-progress-label span { color: var(--n-ink); font-weight: 700; }
 
-.n-action-row [data-testid="stButton"] { min-width: 260px; }
+.n-action-row [data-testid="stButton"] { min-width: 280px; }
 
 [data-testid="stButton"] > button {
     width: 100% !important;
-    height: 50px !important;
+    height: 54px !important;
     background: linear-gradient(135deg, var(--n-violet) 0%, var(--n-violet-dark) 100%) !important;
     color: #FFFFFF !important;
     font-family: 'Inter', sans-serif !important;
-    font-size: 13px !important;
+    font-size: 14.5px !important;
     font-weight: 700 !important;
     letter-spacing: 0.03em !important;
     border: none !important;
-    border-radius: 9px !important;
+    border-radius: 12px !important;
     cursor: pointer !important;
     transition: transform 0.15s ease, box-shadow 0.2s !important;
-    box-shadow: 0 3px 10px rgba(110,55,250,0.32), inset 0 1px 0 rgba(255,255,255,0.18) !important;
+    box-shadow: 0 4px 14px rgba(110,55,250,0.35), inset 0 1px 0 rgba(255,255,255,0.18) !important;
 }
 
 [data-testid="stButton"] > button:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 18px rgba(110,55,250,0.4), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(110,55,250,0.45), inset 0 1px 0 rgba(255,255,255,0.2) !important;
 }
 
 [data-testid="stButton"] > button:disabled {
@@ -366,167 +333,183 @@ footer, #MainMenu { display: none !important; }
 }
 
 /* ═══ PIPELINE STEPPER ═══ */
-.n-pipeline-bar { background: var(--n-panel); border: 1px solid var(--n-line); border-radius: 14px; padding: 30px 34px; box-shadow: 0 1px 2px rgba(32,28,44,0.03); }
+.n-pipeline-bar { 
+    background: var(--n-panel); 
+    border: 1px solid var(--n-line); 
+    border-radius: 16px; 
+    padding: 36px 44px; 
+    box-shadow: 0 4px 20px rgba(32,28,44,0.03); 
+}
 
-.n-stages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; position: relative; }
+.n-stages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; position: relative; }
 
 .n-stages::before {
     content: '';
     position: absolute;
-    top: 18px;
-    left: calc(12.5% + 18px);
-    right: calc(12.5% + 18px);
+    top: 20px;
+    left: calc(12.5% + 20px);
+    right: calc(12.5% + 20px);
     height: 2px;
     background: var(--n-line-soft);
     z-index: 0;
 }
 
-.n-stage-col { display: flex; flex-direction: column; align-items: center; gap: 12px; position: relative; z-index: 1; }
+.n-stage-col { display: flex; flex-direction: column; align-items: center; gap: 14px; position: relative; z-index: 1; }
 
 .n-stage-icon {
-    width: 36px; height: 36px;
+    width: 42px; height: 42px;
     border-radius: 50%;
     border: 2px solid #E4E1EC;
     background: #FFFFFF;
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
     color: #C9C4DB;
     transition: all 0.3s ease;
 }
 
-.n-stage-col.done   .n-stage-icon { border-color: var(--n-good); background: var(--n-good); color: #FFFFFF; }
-.n-stage-col.active .n-stage-icon { border-color: var(--n-violet); background: var(--n-violet); color: #FFFFFF; box-shadow: 0 0 0 4px rgba(110,55,250,0.14); }
+.n-stage-col.done   .n-stage-icon { border-color: var(--n-good); background: var(--n-good); color: #FFFFFF; box-shadow: 0 4px 12px rgba(31,157,108,0.2); }
+.n-stage-col.active .n-stage-icon { border-color: var(--n-violet); background: var(--n-violet); color: #FFFFFF; box-shadow: 0 0 0 5px rgba(110,55,250,0.14); }
 .n-stage-col.failed .n-stage-icon { border-color: var(--n-fail); background: var(--n-fail-wash); color: var(--n-fail); }
 .n-stage-col.skipped .n-stage-icon { border-color: var(--n-warn); background: var(--n-warn-wash); color: var(--n-warn); }
 
-.n-stage-label { font-size: 12.5px; font-weight: 600; color: var(--n-ink-faint); text-align: center; transition: color 0.3s; }
+.n-stage-label { font-size: 14px; font-weight: 600; color: var(--n-ink-faint); text-align: center; transition: color 0.3s; }
 .n-stage-col.done   .n-stage-label { color: var(--n-good); }
 .n-stage-col.active .n-stage-label { color: var(--n-violet); }
 .n-stage-col.failed .n-stage-label { color: var(--n-fail); }
 .n-stage-col.skipped .n-stage-label { color: var(--n-warn); }
 
-.n-stage-sub { font-size: 10.5px; color: #C9C4DB; text-align: center; line-height: 1.4; }
+.n-stage-sub { font-size: 12px; color: #C9C4DB; text-align: center; line-height: 1.5; }
 .n-stage-col.done .n-stage-sub   { color: var(--n-ink-faint); }
-.n-stage-col.active .n-stage-sub { color: var(--n-violet); opacity: 0.75; }
+.n-stage-col.active .n-stage-sub { color: var(--n-violet); opacity: 0.8; }
 
 /* ═══ LOG + RESULTS ROW ═══ */
 .n-row-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 18px;
+    margin-bottom: 24px;
 }
 
-.n-toggle-wrap [data-testid="stWidgetLabel"] p { font-size: 11.5px !important; font-weight: 600 !important; color: var(--n-ink-soft) !important; }
+.n-toggle-wrap [data-testid="stWidgetLabel"] p { font-size: 13px !important; font-weight: 600 !important; color: var(--n-ink-soft) !important; }
 
-.n-log-card { background: var(--n-midnight); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(32,28,44,0.03); }
+.n-log-card { 
+    background: var(--n-midnight); 
+    border-radius: 16px; 
+    overflow: hidden; 
+    box-shadow: 0 8px 32px rgba(0,32,65,0.08); 
+}
 
 .n-log-header {
-    padding: 16px 24px;
+    padding: 20px 32px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: rgba(255,255,255,0.02);
+    background: rgba(255,255,255,0.03);
 }
 
-.n-log-header-title { font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.55); letter-spacing: 0.1em; text-transform: uppercase; }
+.n-log-header-title { font-size: 12.5px; font-weight: 600; color: rgba(255,255,255,0.6); letter-spacing: 0.1em; text-transform: uppercase; }
 
-.n-log-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.18); }
-.n-log-dot.active { background: var(--n-violet); box-shadow: 0 0 6px rgba(110,55,250,0.6); }
+.n-log-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.18); }
+.n-log-dot.active { background: var(--n-violet); box-shadow: 0 0 8px rgba(110,55,250,0.7); }
 .n-log-dot.done   { background: var(--n-good); }
 
 .n-log-body {
-    padding: 22px 24px;
+    padding: 28px 32px;
     font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-    font-size: 12.5px;
-    line-height: 1.95;
-    min-height: 220px;
-    max-height: 340px;
+    font-size: 13.5px;
+    line-height: 2;
+    min-height: 240px;
+    max-height: 400px;
     overflow-y: auto;
 }
 
-.n-log-body::-webkit-scrollbar { width: 4px; }
+.n-log-body::-webkit-scrollbar { width: 6px; }
 .n-log-body::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
-.n-log-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+.n-log-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
 
-.ll { display: flex; gap: 12px; }
-.ll-ts { color: rgba(255,255,255,0.22); flex-shrink: 0; }
+.ll { display: flex; gap: 14px; }
+.ll-ts { color: rgba(255,255,255,0.25); flex-shrink: 0; }
 .ll-ok   { color: #8FB8FF; }
 .ll-good { color: #5CDDA0; }
 .ll-fail { color: #FF7A8A; }
 .ll-warn { color: #F0B84E; }
-.ll-dim  { color: rgba(255,255,255,0.2); }
+.ll-dim  { color: rgba(255,255,255,0.25); }
 .ll-head { color: #B296FF; font-weight: 600; }
-.ll-stage { color: rgba(255,255,255,0.35); }
-.ll-div { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 6px 0; }
+.ll-stage { color: rgba(255,255,255,0.4); }
+.ll-div { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 8px 0; }
 
-.n-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 50px 40px; text-align: center; }
-.n-empty-icon { font-size: 24px; opacity: 0.5; color: var(--n-violet); }
-.n-empty-title { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 500; font-style: italic; color: rgba(255,255,255,0.75); }
-.n-empty-sub { font-size: 11.5px; color: rgba(255,255,255,0.35); max-width: 260px; line-height: 1.6; }
+.n-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 60px 48px; text-align: center; }
+.n-empty-icon { font-size: 28px; opacity: 0.5; color: var(--n-violet); }
+.n-empty-title { font-family: 'Fraunces', serif; font-size: 16px; font-weight: 500; font-style: italic; color: rgba(255,255,255,0.8); }
+.n-empty-sub { font-size: 13px; color: rgba(255,255,255,0.4); max-width: 300px; line-height: 1.6; }
 
 .n-log-compact {
     background: var(--n-panel);
     border: 1px solid var(--n-line);
-    border-radius: 14px;
-    padding: 22px 26px;
+    border-radius: 16px;
+    padding: 26px 32px;
     display: flex;
     align-items: center;
-    gap: 16px;
+    gap: 18px;
+    box-shadow: 0 4px 16px rgba(32,28,44,0.02);
 }
 
-.n-log-compact-dot { width: 9px; height: 9px; border-radius: 50%; background: #E4E1EC; flex-shrink: 0; }
-.n-log-compact-dot.active { background: var(--n-violet); box-shadow: 0 0 0 4px rgba(110,55,250,0.14); }
-.n-log-compact-dot.done   { background: var(--n-good); box-shadow: 0 0 0 4px rgba(31,157,108,0.14); }
-.n-log-compact-dot.fail   { background: var(--n-fail); box-shadow: 0 0 0 4px rgba(214,69,90,0.14); }
+.n-log-compact-dot { width: 10px; height: 10px; border-radius: 50%; background: #E4E1EC; flex-shrink: 0; }
+.n-log-compact-dot.active { background: var(--n-violet); box-shadow: 0 0 0 5px rgba(110,55,250,0.14); }
+.n-log-compact-dot.done   { background: var(--n-good); box-shadow: 0 0 0 5px rgba(31,157,108,0.14); }
+.n-log-compact-dot.fail   { background: var(--n-fail); box-shadow: 0 0 0 5px rgba(214,69,90,0.14); }
 
-.n-log-compact-text { font-size: 13px; font-weight: 600; color: var(--n-ink); }
-.n-log-compact-sub { font-size: 11px; color: var(--n-ink-faint); margin-top: 1px; }
+.n-log-compact-text { font-size: 14.5px; font-weight: 600; color: var(--n-ink); }
+.n-log-compact-sub { font-size: 12.5px; color: var(--n-ink-faint); margin-top: 3px; }
 
 /* ═══ RESULTS ═══ */
 .n-results-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 18px;
+    margin-bottom: 24px;
 }
 
-.n-result-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+.n-result-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
 
-.n-result-card { border-radius: 10px; padding: 18px 20px; border: 1px solid var(--n-line-soft); background: #FCFBFA; }
-.n-result-card.ok   { border-color: rgba(31,157,108,0.28); background: var(--n-good-wash); }
-.n-result-card.fail { border-color: rgba(214,69,90,0.25);  background: var(--n-fail-wash); }
-.n-result-card.skip { border-color: rgba(201,130,30,0.25); background: var(--n-warn-wash); }
+.n-result-card { border-radius: 16px; padding: 24px 28px; border: 1px solid var(--n-line-soft); background: #FCFBFA; box-shadow: 0 4px 16px rgba(32,28,44,0.02); }
+.n-result-card.ok   { border-color: rgba(31,157,108,0.3); background: var(--n-good-wash); }
+.n-result-card.fail { border-color: rgba(214,69,90,0.3);  background: var(--n-fail-wash); }
+.n-result-card.skip { border-color: rgba(201,130,30,0.3); background: var(--n-warn-wash); }
 
-.n-rc-name { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--n-ink-faint); margin-bottom: 10px; }
-.n-rc-stat { font-size: 22px; font-weight: 800; line-height: 1; margin-bottom: 7px; }
+.n-rc-name { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--n-ink-faint); margin-bottom: 12px; }
+.n-rc-stat { font-size: 26px; font-weight: 800; line-height: 1; margin-bottom: 10px; }
 .n-result-card.ok   .n-rc-stat { color: var(--n-good); }
 .n-result-card.fail .n-rc-stat { color: var(--n-fail); }
 .n-result-card.skip .n-rc-stat { color: var(--n-warn); }
-.n-rc-sub { font-size: 10.5px; color: var(--n-ink-faint); line-height: 1.4; }
+.n-rc-sub { font-size: 12px; color: var(--n-ink-faint); line-height: 1.5; }
 
 [data-testid="stDownloadButton"] > button {
-    height: 46px !important;
+    height: 52px !important;
     background: var(--n-midnight) !important;
     color: #FFFFFF !important;
     font-family: 'Inter', sans-serif !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
     font-weight: 600 !important;
     border: none !important;
-    border-radius: 8px !important;
-    padding: 0 26px !important;
+    border-radius: 10px !important;
+    padding: 0 32px !important;
     letter-spacing: 0.02em !important;
     cursor: pointer !important;
-    transition: background 0.2s !important;
+    transition: background 0.2s, box-shadow 0.2s !important;
     white-space: nowrap !important;
+    box-shadow: 0 4px 12px rgba(0,32,65,0.15) !important;
 }
 
-[data-testid="stDownloadButton"] > button:hover { background: var(--n-midnight-2) !important; }
+[data-testid="stDownloadButton"] > button:hover { 
+    background: var(--n-midnight-2) !important; 
+    box-shadow: 0 6px 16px rgba(0,32,65,0.2) !important;
+}
 
 [data-testid="stSpinner"] > div { color: var(--n-violet) !important; }
-.uploadedFileName { color: var(--n-ink) !important; font-size: 11px !important; }
+.uploadedFileName { color: var(--n-ink) !important; font-size: 12px !important; }
 </style>
 """)
 
@@ -647,7 +630,6 @@ def run_pipeline(adapt_f, bsr_f, yt_f, matex_f, sample_f):
     sample_summary = None
     stats = {}
 
-    # Stage 1
     set_stage(1, "active")
     try:
         df = build_rate_check(frames["adapt"], frames["bsr"], frames["yt"])
@@ -659,7 +641,6 @@ def run_pipeline(adapt_f, bsr_f, yt_f, matex_f, sample_f):
         set_stage(1, "failed"); stats[1] = {"ok": False, "error": str(e)}
         add_log(f"  [✗]  RateCheck        {e}", "fail")
 
-    # Stage 2
     set_stage(2, "active")
     try:
         df = build_exposure_check(frames["sample"], frames["matex"])
@@ -671,7 +652,6 @@ def run_pipeline(adapt_f, bsr_f, yt_f, matex_f, sample_f):
         set_stage(2, "failed"); stats[2] = {"ok": False, "error": str(e)}
         add_log(f"  [✗]  ExposureCheck    {e}", "fail")
 
-    # Stage 3
     set_stage(3, "active")
     try:
         ss, sample_summary = build_sample(frames["sample"])
@@ -683,7 +663,6 @@ def run_pipeline(adapt_f, bsr_f, yt_f, matex_f, sample_f):
         set_stage(3, "failed"); stats[3] = {"ok": False, "error": str(e)}
         add_log(f"  [✗]  Sample           {e}", "fail")
 
-    # Stage 4
     set_stage(4, "active")
     try:
         if sample_summary is None:
@@ -726,7 +705,6 @@ def run_pipeline(adapt_f, bsr_f, yt_f, matex_f, sample_f):
 # RENDER
 # ══════════════════════════════════════════════════════════════════════════════
 
-# ── TOPBAR ───────────────────────────────────────────────────────────────────
 _html("""
 <div class="n-topbar-outer">
   <div class="n-topbar">
@@ -745,7 +723,7 @@ _html("""
 _html('<div class="n-shell">')
 
 # ═══════════════════════════════════════════════════════════════════════════
-# STEP 1 — SOURCE FILES
+# STEP 1
 # ═══════════════════════════════════════════════════════════════════════════
 _html('<div class="n-section">')
 _html("""
@@ -766,7 +744,7 @@ FILE_DEFS = [
 
 uploaded = {}
 loaded_count = 0
-upload_cols = st.columns(5, gap="small")
+upload_cols = st.columns(5, gap="medium") # Increased gap for premium feel
 
 for col, (key, label, hint) in zip(upload_cols, FILE_DEFS):
     with col:
@@ -793,13 +771,12 @@ for col, (key, label, hint) in zip(upload_cols, FILE_DEFS):
         _html(f'<div class="n-upload-status{" loaded" if uf else ""}">{status_txt}</div>')
         _html('</div>')
 
-# Action row — progress + run button
 pct = int(loaded_count / 5 * 100)
 all_ready = loaded_count == 5
 btn_label = "Run QC Pipeline →" if all_ready else f"Waiting for {5 - loaded_count} more file{'s' if 5-loaded_count != 1 else ''}"
 
 _html('<div class="n-action-row">')
-action_progress_col, action_btn_col = st.columns([2.2, 1], gap="medium")
+action_progress_col, action_btn_col = st.columns([2.5, 1], gap="large")
 with action_progress_col:
     _html(f"""
     <div class="n-action-progress">
@@ -818,11 +795,10 @@ with action_btn_col:
             )
         st.rerun()
 _html('</div>')
-
-_html('</div>')  # end n-section (step 1)
+_html('</div>')
 
 # ═══════════════════════════════════════════════════════════════════════════
-# STEP 2 — PIPELINE STAGES
+# STEP 2
 # ═══════════════════════════════════════════════════════════════════════════
 _html('<div class="n-section">')
 _html("""
@@ -866,17 +842,17 @@ _html(f"""
   <div class="n-stages">{cols_html}</div>
 </div>
 """)
-_html('</div>')  # end n-section (step 2)
+_html('</div>')
 
 # ═══════════════════════════════════════════════════════════════════════════
-# STEP 3 — LOG
+# STEP 3
 # ═══════════════════════════════════════════════════════════════════════════
 _html('<div class="n-section">')
 
 done_count = sum(1 for s in (st.session_state.result_stats or {}).values() if s.get("ok"))
 dot_class = "active" if st.session_state.log_lines and not st.session_state.result_stats else ("done" if st.session_state.result_stats else "")
 
-head_col1, head_col2 = st.columns([3, 1], gap="small")
+head_col1, head_col2 = st.columns([3, 1], gap="medium")
 with head_col1:
     _html("""
     <div class="n-step-head" style="margin-bottom:0;">
@@ -891,7 +867,7 @@ with head_col2:
     )
     _html('</div>')
 
-_html('<div style="height:18px"></div>')
+_html('<div style="height:22px"></div>')
 
 if st.session_state.show_logs:
     if not st.session_state.log_lines:
@@ -905,7 +881,7 @@ if st.session_state.show_logs:
         rows_html = ""
         for stamp, text, kind in st.session_state.log_lines:
             if text == "":
-                rows_html += '<div style="height:3px"></div>'
+                rows_html += '<div style="height:4px"></div>'
             elif text.startswith("──"):
                 rows_html += f'<hr class="ll-div"><div class="ll"><span class="ll-ts">{stamp}</span><span class="ll-stage">{text}</span></div>'
             else:
@@ -944,15 +920,15 @@ else:
     </div>
     """)
 
-_html('</div>')  # end n-section (step 3)
+_html('</div>')
 
 # ═══════════════════════════════════════════════════════════════════════════
-# STEP 4 — OUTPUT
+# STEP 4
 # ═══════════════════════════════════════════════════════════════════════════
 if st.session_state.result_stats:
     _html('<div class="n-section">')
 
-    res_head_col1, res_head_col2 = st.columns([3, 1], gap="small")
+    res_head_col1, res_head_col2 = st.columns([3, 1], gap="medium")
     with res_head_col1:
         _html("""
         <div class="n-step-head" style="margin-bottom:0;">
@@ -971,7 +947,7 @@ if st.session_state.result_stats:
                 use_container_width=True,
             )
 
-    _html('<div style="height:18px"></div>')
+    _html('<div style="height:22px"></div>')
 
     stats = st.session_state.result_stats
     names = ["RateCheck","ExposureCheck","Sample","ExtrapCheck"]
@@ -1000,6 +976,6 @@ if st.session_state.result_stats:
         </div>"""
 
     _html(f'<div class="n-result-grid">{cards_html}</div>')
-    _html('</div>')  # end n-section (step 4)
+    _html('</div>')
 
-_html('</div>')  # end n-shell
+_html('</div>')
