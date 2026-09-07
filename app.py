@@ -285,64 +285,72 @@ footer, #MainMenu { display: none !important; }
    own components in Nielsen violet natively, so the native drag-drop
    text and Browse button are safe to just show — properly colored,
    guaranteed present, no CSS guessing about internal markup required. */
-[data-testid="stFileUploader"] { background: transparent !important; margin: 0 !important; padding: 0 !important; }
+[data-testid="stFileUploader"] { background: transparent !important; margin: 0 !important; padding: 0 !important; color-scheme: light !important; }
 
-[data-testid="stFileUploaderDropzoneInstructions"] {
-    padding: 4px 0 !important;
-}
-[data-testid="stFileUploaderDropzoneInstructions"] span {
-    font-size: 11px !important;
-    color: var(--n-ink-faint) !important;
-}
-[data-testid="stFileUploaderDropzoneInstructions"] small {
-    font-size: 9.5px !important;
-    color: var(--n-ink-faint) !important;
-    opacity: 0.7;
-}
+/* Everything below anchors on [data-testid="stFileUploader"] — the one
+   testid we have direct evidence actually matches, since other rules
+   using it render correctly in your screenshots — and then selects by
+   real HTML tag (section, button) rather than guessing deeper testid
+   names like "stFileUploaderDropzone", which has failed to match
+   several times in a row now regardless of what was written for it. */
 
-[data-testid="stFileUploaderDropzone"] {
+[data-testid="stFileUploader"] section {
     background: #FBFAF8 !important;
     border: 1.5px dashed #DDD7EE !important;
     border-radius: 8px !important;
     padding: 10px 12px !important;
     min-height: unset !important;
+    color-scheme: light !important;
     transition: border-color 0.2s, background 0.2s !important;
 }
 
-[data-testid="stFileUploaderDropzone"]:hover {
+[data-testid="stFileUploader"] section:hover {
     border-color: var(--n-violet) !important;
     background: var(--n-violet-wash) !important;
 }
 
-/* Once a file is attached, Streamlit's own file chip is redundant with
-   our status line below (which we build from uf.name / uf.size that we
-   already control) — hide only that specific chip, not the whole
-   dropzone or its browse affordance. */
-[data-testid="stFileUploaderFile"] { display: none !important; }
+[data-testid="stFileUploader"] section small {
+    font-size: 9.5px !important;
+    color: var(--n-ink-faint) !important;
+    opacity: 0.7;
+}
 
-/* Explicit light styling as a second, independent safety net on top of
-   color-scheme: light above — belt and braces on the one element that
-   has broken three times now. Even if color-scheme alone were somehow
-   insufficient in some browser, this pins the actual colors directly. */
-[data-testid="stFileUploaderDropzone"] button {
+/* The button by TAG, not by testid — a <button> element inside the
+   uploader will always be a <button>, regardless of what testid or
+   internal class Streamlit's frontend build assigns it. */
+[data-testid="stFileUploader"] button {
     color-scheme: light !important;
     background-color: #FFFFFF !important;
-    color: var(--n-ink) !important;
     border: 1px solid var(--n-line) !important;
+    border-radius: 6px !important;
     transform: scale(0.82);
     transform-origin: left center;
 }
 
-[data-testid="stFileUploaderDropzone"] button:hover {
+[data-testid="stFileUploader"] button,
+[data-testid="stFileUploader"] button * {
+    color: var(--n-ink) !important;
+}
+
+[data-testid="stFileUploader"] button:hover {
     background-color: var(--n-violet-wash) !important;
     border-color: var(--n-violet) !important;
+}
+
+[data-testid="stFileUploader"] button:hover,
+[data-testid="stFileUploader"] button:hover * {
     color: var(--n-violet-dark) !important;
 }
 
-[data-testid="stFileUploaderDropzone"] button p,
-[data-testid="stFileUploaderDropzone"] button span {
-    color: inherit !important;
+/* Once a file is attached, Streamlit's own file chip is redundant with
+   our status line below (which we build from uf.name / uf.size that we
+   already control) — try both the modern and a plausible legacy testid
+   for that chip so hiding it doesn't silently depend on guessing right. */
+[data-testid="stFileUploaderFile"],
+[data-testid="stFileUploader"] li {
+    display: none !important;
 }
+
 
 /* ═══ ACTION ROW (progress + run button) ═══ */
 .n-action-row {
@@ -541,26 +549,41 @@ footer, #MainMenu { display: none !important; }
 .n-log-compact-sub { font-size: 11px; color: var(--n-ink-faint); margin-top: 1px; }
 
 /* ═══ RESULTS ═══ */
-.n-results-head {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 18px;
+/* General card chrome for ANY st.container(border=True) in the app,
+   not just ones sitting inside a column (the upload-card rule above
+   only matches inside [data-testid="column"], so this results card —
+   which lives directly in the page flow — needs its own base rule). */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border: 1px solid var(--n-line) !important;
+    border-radius: 14px !important;
+    background: var(--n-panel) !important;
 }
 
-.n-result-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+/* Distinct, more generous padding for this specific card via
+   Streamlit's container key= (adds a stable .st-key-<name> class) —
+   the upload cards are small utility slots, this is a summary card
+   and needs real breathing room, which is what "cramped" meant. */
+.st-key-output_results {
+    box-shadow: 0 2px 6px rgba(32,28,44,0.05), 0 8px 24px rgba(32,28,44,0.04) !important;
+}
+.st-key-output_results > div {
+    padding: 30px 34px !important;
+    gap: 0 !important;
+}
 
-.n-result-card { border-radius: 10px; padding: 18px 20px; border: 1px solid var(--n-line-soft); background: #FCFBFA; }
+.n-result-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+
+.n-result-card { border-radius: 12px; padding: 22px 24px; border: 1px solid var(--n-line-soft); background: #FCFBFA; }
 .n-result-card.ok   { border-color: rgba(31,157,108,0.28); background: var(--n-good-wash); }
 .n-result-card.fail { border-color: rgba(214,69,90,0.25);  background: var(--n-fail-wash); }
 .n-result-card.skip { border-color: rgba(201,130,30,0.25); background: var(--n-warn-wash); }
 
-.n-rc-name { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--n-ink-faint); margin-bottom: 10px; }
-.n-rc-stat { font-size: 22px; font-weight: 800; line-height: 1; margin-bottom: 7px; }
+.n-rc-name { font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--n-ink-faint); margin-bottom: 16px; }
+.n-rc-stat { font-size: 26px; font-weight: 800; line-height: 1; margin-bottom: 10px; }
 .n-result-card.ok   .n-rc-stat { color: var(--n-good); }
 .n-result-card.fail .n-rc-stat { color: var(--n-fail); }
 .n-result-card.skip .n-rc-stat { color: var(--n-warn); }
-.n-rc-sub { font-size: 10.5px; color: var(--n-ink-faint); line-height: 1.4; }
+.n-rc-sub { font-size: 11px; color: var(--n-ink-faint); line-height: 1.5; }
 
 [data-testid="stDownloadButton"] > button {
     height: 46px !important;
@@ -1013,55 +1036,55 @@ _html('</div>')  # end n-section (step 3)
 # ═══════════════════════════════════════════════════════════════════════════
 if st.session_state.result_stats:
     _html('<div class="n-section">')
+    with st.container(border=True, key="output_results"):
+        res_head_col1, res_head_col2 = st.columns([3, 1], gap="small")
+        with res_head_col1:
+            _html("""
+            <div class="n-step-head" style="margin-bottom:0;">
+              <div class="n-step-num">4</div>
+              <div class="n-step-title">Output Sheets</div>
+            </div>
+            """)
+        with res_head_col2:
+            if st.session_state.output_bytes:
+                fname = f"QC_Output_{time.strftime('%Y%m%d_%H%M')}.xlsx"
+                st.download_button(
+                    label="↓  Download",
+                    data=st.session_state.output_bytes,
+                    file_name=fname,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True,
+                )
 
-    res_head_col1, res_head_col2 = st.columns([3, 1], gap="small")
-    with res_head_col1:
-        _html("""
-        <div class="n-step-head" style="margin-bottom:0;">
-          <div class="n-step-num">4</div>
-          <div class="n-step-title">Output Sheets</div>
-        </div>
-        """)
-    with res_head_col2:
-        if st.session_state.output_bytes:
-            fname = f"QC_Output_{time.strftime('%Y%m%d_%H%M')}.xlsx"
-            st.download_button(
-                label="↓  Download",
-                data=st.session_state.output_bytes,
-                file_name=fname,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True,
-            )
+        _html('<div style="height:26px"></div>')
 
-    _html('<div style="height:18px"></div>')
+        stats = st.session_state.result_stats
+        names = ["RateCheck","ExposureCheck","Sample","ExtrapCheck"]
 
-    stats = st.session_state.result_stats
-    names = ["RateCheck","ExposureCheck","Sample","ExtrapCheck"]
+        cards_html = ""
+        for i, sname in enumerate(names, 1):
+            s = stats.get(i, {})
+            ok      = s.get("ok", False)
+            skipped = s.get("skipped", False)
+            cls     = "ok" if ok else ("skip" if skipped else "fail")
+            icon    = "✓" if ok else ("⚠" if skipped else "✗")
+            rows    = s.get("rows")
+            if ok:
+                sub = f"{rows:,} rows" if rows else "complete"
+                if i == 3 and s.get("matchdays"): sub += f"<br>{s['matchdays']} matchdays"
+            elif skipped:
+                sub = "Stage 3 required"
+            else:
+                sub = "See log above"
 
-    cards_html = ""
-    for i, sname in enumerate(names, 1):
-        s = stats.get(i, {})
-        ok      = s.get("ok", False)
-        skipped = s.get("skipped", False)
-        cls     = "ok" if ok else ("skip" if skipped else "fail")
-        icon    = "✓" if ok else ("⚠" if skipped else "✗")
-        rows    = s.get("rows")
-        if ok:
-            sub = f"{rows:,} rows" if rows else "complete"
-            if i == 3 and s.get("matchdays"): sub += f"<br>{s['matchdays']} matchdays"
-        elif skipped:
-            sub = "Stage 3 required"
-        else:
-            sub = "See log above"
+            cards_html += f"""
+            <div class="n-result-card {cls}">
+              <div class="n-rc-name">{sname}</div>
+              <div class="n-rc-stat">{icon}</div>
+              <div class="n-rc-sub">{sub}</div>
+            </div>"""
 
-        cards_html += f"""
-        <div class="n-result-card {cls}">
-          <div class="n-rc-name">{sname}</div>
-          <div class="n-rc-stat">{icon}</div>
-          <div class="n-rc-sub">{sub}</div>
-        </div>"""
-
-    _html(f'<div class="n-result-grid">{cards_html}</div>')
+        _html(f'<div class="n-result-grid">{cards_html}</div>')
     _html('</div>')  # end n-section (step 4)
 
 _html('</div>')  # end n-shell
