@@ -457,6 +457,8 @@ footer, #MainMenu { display: none !important; }
 .n-log-dot { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.18); }
 .n-log-dot.active { background: var(--n-violet); box-shadow: 0 0 6px rgba(110,55,250,0.6); }
 .n-log-dot.done   { background: var(--n-good); }
+.n-log-dot.warn   { background: var(--n-warn); }
+.n-log-dot.fail   { background: var(--n-fail); box-shadow: 0 0 6px rgba(214,69,90,0.5); }
 
 .n-log-body {
     padding: 22px 24px;
@@ -659,6 +661,11 @@ def run_pipeline(adapt_f, bsr_f, yt_f, matex_f, sample_f):
 
     if not load_ok:
         add_log("", "dim"); add_log("  PIPELINE ABORTED — fix load errors above", "fail")
+        for n in [1, 2, 3, 4]:
+            set_stage(n, "failed")
+        st.session_state.result_stats = {
+            n: {"ok": False, "error": "Load failed — see log above"} for n in [1, 2, 3, 4]
+        }
         return
 
     add_log("", "dim")
@@ -894,7 +901,12 @@ _html('</div>')  # end n-section (step 2)
 _html('<div class="n-section">')
 
 done_count = sum(1 for s in (st.session_state.result_stats or {}).values() if s.get("ok"))
-dot_class = "active" if st.session_state.log_lines and not st.session_state.result_stats else ("done" if st.session_state.result_stats else "")
+if st.session_state.result_stats:
+    dot_class = "fail" if done_count == 0 else ("warn" if done_count < 4 else "done")
+elif st.session_state.log_lines:
+    dot_class = "active"
+else:
+    dot_class = ""
 
 head_col1, head_col2 = st.columns([3, 1], gap="small")
 with head_col1:
