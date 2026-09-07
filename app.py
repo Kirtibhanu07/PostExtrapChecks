@@ -1042,7 +1042,7 @@ if st.session_state.result_stats:
             _html("""
             <div class="n-step-head" style="margin-bottom:0;">
               <div class="n-step-num">4</div>
-              <div class="n-step-title">Output Sheets</div>
+              <div class="n-step-title">Results</div>
             </div>
             """)
         with res_head_col2:
