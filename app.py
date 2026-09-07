@@ -4,6 +4,7 @@ Run: streamlit run app.py
 """
 
 import re
+import html as html_lib
 
 import io
 import time
@@ -28,6 +29,12 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+
+def _flatten(content: str) -> str:
+    """Collapse any HTML fragment onto a single line — see _html() below
+    for exactly why this is necessary, not optional."""
+    return re.sub(r"\s*\n\s*", " ", content).strip()
 
 
 def _html(content: str) -> None:
@@ -56,8 +63,20 @@ def _html(content: str) -> None:
     the only fix that removes both failure modes at once, regardless of
     how deeply the call is nested or how the string was assembled.
     """
-    flat = re.sub(r"\s*\n\s*", " ", content).strip()
-    st.markdown(flat, unsafe_allow_html=True)
+    st.markdown(_flatten(content), unsafe_allow_html=True)
+
+
+def _html_into(placeholder, content: str) -> None:
+    """Same safety as _html(), but writes into an st.empty() placeholder
+    instead of appending to the normal page flow. This is what makes
+    live, mid-run updates possible: a placeholder reserves its position
+    in the page the moment st.empty() is called, and any later
+    .markdown() call on it updates just that spot — including calls made
+    from inside run_pipeline() while it's still executing, which is how
+    stage results and log lines appear progressively instead of all at
+    once at the end.
+    """
+    placeholder.markdown(_flatten(content), unsafe_allow_html=True)
 
 
 
@@ -177,12 +196,11 @@ footer, #MainMenu { display: none !important; }
 .n-topbar-text { display: flex; flex-direction: column; gap: 2px; }
 
 .n-wordmark {
-    font-family: 'Fraunces', serif;
+    font-family: 'Inter', sans-serif;
     font-size: 19px;
-    font-weight: 600;
-    font-style: italic;
+    font-weight: 700;
     color: #FFFFFF;
-    letter-spacing: -0.2px;
+    letter-spacing: -0.3px;
     line-height: 1;
 }
 
@@ -567,7 +585,7 @@ footer, #MainMenu { display: none !important; }
     box-shadow: 0 2px 6px rgba(32,28,44,0.05), 0 8px 24px rgba(32,28,44,0.04) !important;
 }
 .st-key-output_results > div {
-    padding: 8px 5px !important;
+    padding: 30px 34px !important;
     gap: 0 !important;
 }
 
@@ -584,6 +602,76 @@ footer, #MainMenu { display: none !important; }
 .n-result-card.fail .n-rc-stat { color: var(--n-fail); }
 .n-result-card.skip .n-rc-stat { color: var(--n-warn); }
 .n-rc-sub { font-size: 11px; color: var(--n-ink-faint); line-height: 1.5; }
+.n-rc-err {
+    font-size: 10.5px;
+    color: var(--n-fail);
+    line-height: 1.5;
+    margin-top: 4px;
+    font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+    word-break: break-word;
+}
+
+/* ═══ SUMMARY BANNER (top of page, after a run) ═══ */
+.n-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 22px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 28px;
+    border: 1px solid transparent;
+}
+.n-banner-icon { font-size: 16px; line-height: 1; }
+.n-banner-active {
+    background: var(--n-violet-wash);
+    border-color: rgba(110,55,250,0.25);
+    color: var(--n-violet-dark);
+}
+.n-banner-pass {
+    background: var(--n-good-wash);
+    border-color: rgba(31,157,108,0.28);
+    color: var(--n-good);
+}
+.n-banner-partial {
+    background: var(--n-warn-wash);
+    border-color: rgba(201,130,30,0.28);
+    color: var(--n-warn);
+}
+.n-banner-fail {
+    background: var(--n-fail-wash);
+    border-color: rgba(214,69,90,0.28);
+    color: var(--n-fail);
+}
+
+/* ═══ RUN HISTORY ═══ */
+/* Styled via the container's key= — same proven pattern as
+   .st-key-output_results — rather than a manually opened/closed <div>,
+   which would produce disconnected sibling nodes around the st.columns()
+   rows exactly like the upload-card and output-results bugs fixed
+   earlier in this app's history. */
+.st-key-run_history {
+    box-shadow: 0 2px 6px rgba(32,28,44,0.05), 0 8px 24px rgba(32,28,44,0.04) !important;
+}
+.st-key-run_history > div {
+    padding: 6px 24px !important;
+    gap: 0 !important;
+}
+.n-history-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    gap: 16px;
+}
+.n-history-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.n-history-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.n-history-dot.pass    { background: var(--n-good); }
+.n-history-dot.partial { background: var(--n-warn); }
+.n-history-dot.fail    { background: var(--n-fail); }
+.n-history-time { font-size: 12.5px; font-weight: 600; color: var(--n-ink); font-family: 'Inter', monospace; }
+.n-history-status { font-size: 11.5px; color: var(--n-ink-faint); }
 
 [data-testid="stDownloadButton"] > button {
     height: 46px !important;
@@ -603,6 +691,15 @@ footer, #MainMenu { display: none !important; }
 
 [data-testid="stDownloadButton"] > button:hover { background: var(--n-midnight-2) !important; }
 
+/* Compact variant for the small per-row download buttons in Run History
+   — scoped via the container's key= so it doesn't affect the main
+   Step 4 download button. */
+.st-key-run_history [data-testid="stDownloadButton"] > button {
+    height: 32px !important;
+    padding: 0 14px !important;
+    font-size: 11px !important;
+}
+
 [data-testid="stSpinner"] > div { color: var(--n-violet) !important; }
 .uploadedFileName { color: var(--n-ink) !important; font-size: 11px !important; }
 </style>
@@ -619,6 +716,138 @@ if "output_bytes" not in st.session_state:
     st.session_state.output_bytes = None
 if "show_logs" not in st.session_state:
     st.session_state.show_logs = True
+if "pipeline_running" not in st.session_state:
+    st.session_state.pipeline_running = False
+if "run_history" not in st.session_state:
+    st.session_state.run_history = []
+
+# ── Shared definitions (used by both the live-update path inside
+#    run_pipeline and the normal top-to-bottom render pass, so the two
+#    can never drift into showing different markup for the same state) ──
+STAGE_DEFS = [
+    (1, "RateCheck",     "Adapt · BSR · YT"),
+    (2, "ExposureCheck", "Sample vs Matex"),
+    (3, "Sample",        "pID · matchdays"),
+    (4, "ExtrapCheck",   "BT% / Msec%"),
+]
+ICON_MAP = {"idle":"—","done":"✓","active":"◎","failed":"✗","skipped":"⚠"}
+
+# Live-update channel: run_pipeline writes into these placeholders (when
+# given) as it executes, so stage results and log lines appear on screen
+# progressively instead of all at once when the function returns. Plain
+# module-level variables are safe here — Streamlit re-executes this
+# whole file top-to-bottom on every interaction, so these are freshly
+# None at the start of every run and only ever populated for the
+# duration of the one run_pipeline() call that uses them.
+_LIVE = {"stage_ph": None, "log_ph": None, "banner_ph": None}
+
+
+def render_stage_stepper_into(ph):
+    cols_html = ""
+    for n, title, sub in STAGE_DEFS:
+        state = st.session_state.stage_states[n]
+        icon = ICON_MAP.get(state, "—")
+        if state == "done" and st.session_state.result_stats:
+            s = st.session_state.result_stats.get(n, {})
+            rows = s.get("rows")
+            if rows:
+                sub = f"{rows:,} rows"
+            if n == 3 and s.get("matchdays"):
+                sub += f" · {s['matchdays']} matchdays"
+        cols_html += f"""
+        <div class="n-stage-col {state}">
+          <div class="n-stage-icon">{icon}</div>
+          <div class="n-stage-label">{title}</div>
+          <div class="n-stage-sub">{sub}</div>
+        </div>"""
+    _html_into(ph, f"""
+    <div class="n-pipeline-bar">
+      <div class="n-stages">{cols_html}</div>
+    </div>
+    """)
+
+
+def render_log_into(ph):
+    done_count = sum(1 for s in (st.session_state.result_stats or {}).values() if s.get("ok"))
+    if st.session_state.pipeline_running:
+        dot_class = "active"
+    elif st.session_state.result_stats:
+        dot_class = "fail" if done_count == 0 else ("warn" if done_count < 4 else "done")
+    elif st.session_state.log_lines:
+        dot_class = "active"
+    else:
+        dot_class = ""
+
+    if st.session_state.show_logs:
+        if not st.session_state.log_lines:
+            log_content = """
+            <div class="n-empty">
+              <div class="n-empty-icon">○</div>
+              <div class="n-empty-title">No pipeline run yet</div>
+              <div class="n-empty-sub">Upload all 5 source files and press Run QC Pipeline</div>
+            </div>"""
+        else:
+            rows_html = ""
+            for stamp, text, kind in st.session_state.log_lines:
+                if text == "":
+                    rows_html += '<div style="height:8px"></div>'
+                elif text.startswith("──"):
+                    rows_html += f'<hr class="ll-div"><div class="ll"><span class="ll-ts">{stamp}</span><span class="ll-stage">{text}</span></div>'
+                else:
+                    cls = {"ok":"ll-ok","good":"ll-good","fail":"ll-fail","warn":"ll-warn","dim":"ll-dim","head":"ll-head","stage":"ll-stage"}.get(kind,"ll-ok")
+                    rows_html += f'<div class="ll"><span class="ll-ts">{stamp}</span><span class="{cls}">{text}</span></div>'
+            log_content = f'<div class="n-log-body">{rows_html}</div>'
+
+        _html_into(ph, f"""
+        <div class="n-log-card">
+          <div class="n-log-header">
+            <span class="n-log-header-title">Live Output</span>
+            <div class="n-log-dot {dot_class}"></div>
+          </div>
+          {log_content}
+        </div>
+        """)
+    else:
+        if st.session_state.pipeline_running:
+            compact_dot, compact_text, compact_sub = "active", "Running…", "Toggle logs on for step-by-step detail"
+        elif not st.session_state.log_lines:
+            compact_dot, compact_text, compact_sub = "", "No pipeline run yet", "Toggle logs on for step-by-step detail"
+        elif st.session_state.result_stats and done_count == 4:
+            compact_dot, compact_text, compact_sub = "done", "Complete — all 4 sheets written", "Toggle logs on for step-by-step detail"
+        elif st.session_state.result_stats and done_count > 0:
+            compact_dot, compact_text, compact_sub = "fail", f"Partial — {done_count}/4 sheets written", "Toggle logs on to see what failed"
+        elif st.session_state.result_stats:
+            compact_dot, compact_text, compact_sub = "fail", "Failed — no output written", "Toggle logs on to see what failed"
+        else:
+            compact_dot, compact_text, compact_sub = "active", "Running…", "Toggle logs on for step-by-step detail"
+
+        _html_into(ph, f"""
+        <div class="n-log-compact">
+          <div class="n-log-compact-dot {compact_dot}"></div>
+          <div>
+            <div class="n-log-compact-text">{compact_text}</div>
+            <div class="n-log-compact-sub">{compact_sub}</div>
+          </div>
+        </div>
+        """)
+
+
+def render_banner_into(ph):
+    if st.session_state.pipeline_running:
+        _html_into(ph, '<div class="n-banner n-banner-active"><span class="n-banner-icon">⟳</span><span>Running pipeline…</span></div>')
+        return
+    if not st.session_state.result_stats:
+        ph.markdown("", unsafe_allow_html=True)
+        return
+    done_count = sum(1 for s in st.session_state.result_stats.values() if s.get("ok"))
+    if done_count == 4:
+        cls, icon, text = "pass", "✓", "4/4 passed"
+    elif done_count > 0:
+        cls, icon, text = "partial", "◐", f"{done_count}/4 passed — partial"
+    else:
+        cls, icon, text = "fail", "✗", "Failed — 0/4 passed"
+    _html_into(ph, f'<div class="n-banner n-banner-{cls}"><span class="n-banner-icon">{icon}</span><span>{text}</span></div>')
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 def ts():
@@ -626,9 +855,15 @@ def ts():
 
 def add_log(text, kind="ok"):
     st.session_state.log_lines.append((ts(), text, kind))
+    if _LIVE["log_ph"] is not None:
+        render_log_into(_LIVE["log_ph"])
 
 def set_stage(n, state):
     st.session_state.stage_states[n] = state
+    if _LIVE["stage_ph"] is not None:
+        render_stage_stepper_into(_LIVE["stage_ph"])
+    if _LIVE["banner_ph"] is not None:
+        render_banner_into(_LIVE["banner_ph"])
 
 # ── Excel writer ──────────────────────────────────────────────────────────────
 def write_output_styled(sheets: dict) -> bytes:
@@ -683,126 +918,175 @@ def write_output_styled(sheets: dict) -> bytes:
     return buf.getvalue()
 
 # ── Pipeline runner ───────────────────────────────────────────────────────────
-def run_pipeline(adapt_f, bsr_f, yt_f, matex_f, sample_f):
-    st.session_state.log_lines = []
-    st.session_state.result_stats = None
-    st.session_state.output_bytes = None
-    for n in [1,2,3,4]: set_stage(n, "idle")
+def run_pipeline(adapt_f, bsr_f, yt_f, matex_f, sample_f,
+                  live_stage_ph=None, live_log_ph=None, live_banner_ph=None):
+    # Wire up the live-update channel for the duration of this call only.
+    # Every add_log()/set_stage() from here on will push straight into
+    # these placeholders as it happens, which is what makes stage
+    # results and log lines appear on screen progressively rather than
+    # all at once when this function returns.
+    _LIVE["stage_ph"]  = live_stage_ph
+    _LIVE["log_ph"]    = live_log_ph
+    _LIVE["banner_ph"] = live_banner_ph
+    st.session_state.pipeline_running = True
 
-    add_log("QC CHECK AUTOMATION PIPELINE", "head")
-    add_log(f"Started at {time.strftime('%Y-%m-%d %H:%M:%S')}", "dim")
-    add_log("", "dim")
-    add_log("── LOAD ──────────────────────────────────────────────", "stage")
+    try:
+        st.session_state.log_lines = []
+        st.session_state.result_stats = None
+        st.session_state.output_bytes = None
+        for n in [1,2,3,4]: set_stage(n, "idle")
+        if live_banner_ph is not None:
+            render_banner_into(live_banner_ph)
 
-    load_ok = True
-    frames  = {}
+        add_log("QC CHECK AUTOMATION PIPELINE", "head")
+        add_log(f"Started at {time.strftime('%Y-%m-%d %H:%M:%S')}", "dim")
+        add_log("", "dim")
+        add_log("── LOAD ──────────────────────────────────────────────", "stage")
 
-    for key, uf, sheet, hdr, label in [
-        ("adapt",  adapt_f,  SHEETS["adapt"],  0, "Adapt"),
-        ("bsr",    bsr_f,    SHEETS["bsr"],    5, "BSR"),
-        ("yt",     yt_f,     SHEETS["yt"],     0, "YouTube MM"),
-        ("matex",  matex_f,  SHEETS["matex"],  0, "Matex"),
-        ("sample", sample_f, SHEETS["sample"], 0, "Sample"),
-    ]:
+        load_ok = True
+        frames  = {}
+
+        for key, uf, sheet, hdr, label in [
+            ("adapt",  adapt_f,  SHEETS["adapt"],  0, "Adapt"),
+            ("bsr",    bsr_f,    SHEETS["bsr"],    5, "BSR"),
+            ("yt",     yt_f,     SHEETS["yt"],     0, "YouTube MM"),
+            ("matex",  matex_f,  SHEETS["matex"],  0, "Matex"),
+            ("sample", sample_f, SHEETS["sample"], 0, "Sample"),
+        ]:
+            try:
+                buf = io.BytesIO(uf.read())
+                df  = pd.read_excel(buf, sheet_name=sheet, header=hdr, engine="openpyxl")
+                df.columns = [str(c).strip() for c in df.columns]
+                frames[key] = df
+                add_log(f"  [✓]  {label:<14}  {len(df):,} rows · {len(df.columns)} cols", "good")
+            except Exception as e:
+                add_log(f"  [✗]  {label:<14}  {e}", "fail")
+                load_ok = False
+
+        if not load_ok:
+            add_log("", "dim"); add_log("  PIPELINE ABORTED — fix load errors above", "fail")
+            for n in [1, 2, 3, 4]:
+                set_stage(n, "failed")
+            st.session_state.result_stats = {
+                n: {"ok": False, "error": "Load failed — see log above"} for n in [1, 2, 3, 4]
+            }
+            return
+
+        add_log("", "dim")
+        add_log("── STAGES ────────────────────────────────────────────", "stage")
+
+        output_sheets  = {}
+        sample_summary = None
+        # stats IS st.session_state.result_stats from this point on (same
+        # object, not a copy) — mutating stats[n] below is what the live
+        # placeholders read mid-run, stage by stage, as each one lands.
+        stats = st.session_state.result_stats = {}
+
+        # Stage 1
+        set_stage(1, "active")
         try:
-            buf = io.BytesIO(uf.read())
-            df  = pd.read_excel(buf, sheet_name=sheet, header=hdr, engine="openpyxl")
-            df.columns = [str(c).strip() for c in df.columns]
-            frames[key] = df
-            add_log(f"  [✓]  {label:<14}  {len(df):,} rows · {len(df.columns)} cols", "good")
+            df = build_rate_check(frames["adapt"], frames["bsr"], frames["yt"])
+            output_sheets["RateCheck"] = df
+            stats[1] = {"rows": len(df), "ok": True}
+            set_stage(1, "done")
+            add_log(f"  [✓]  RateCheck        {len(df):,} rows", "good")
         except Exception as e:
-            add_log(f"  [✗]  {label:<14}  {e}", "fail")
-            load_ok = False
+            stats[1] = {"ok": False, "error": str(e)}
+            set_stage(1, "failed")
+            add_log(f"  [✗]  RateCheck        {e}", "fail")
 
-    if not load_ok:
-        add_log("", "dim"); add_log("  PIPELINE ABORTED — fix load errors above", "fail")
-        for n in [1, 2, 3, 4]:
-            set_stage(n, "failed")
-        st.session_state.result_stats = {
-            n: {"ok": False, "error": "Load failed — see log above"} for n in [1, 2, 3, 4]
-        }
-        return
-
-    add_log("", "dim")
-    add_log("── STAGES ────────────────────────────────────────────", "stage")
-
-    output_sheets  = {}
-    sample_summary = None
-    stats = {}
-
-    # Stage 1
-    set_stage(1, "active")
-    try:
-        df = build_rate_check(frames["adapt"], frames["bsr"], frames["yt"])
-        output_sheets["RateCheck"] = df
-        stats[1] = {"rows": len(df), "ok": True}
-        set_stage(1, "done")
-        add_log(f"  [✓]  RateCheck        {len(df):,} rows", "good")
-    except Exception as e:
-        set_stage(1, "failed"); stats[1] = {"ok": False, "error": str(e)}
-        add_log(f"  [✗]  RateCheck        {e}", "fail")
-
-    # Stage 2
-    set_stage(2, "active")
-    try:
-        df = build_exposure_check(frames["sample"], frames["matex"])
-        output_sheets["ExposureCheck"] = df
-        stats[2] = {"rows": len(df), "ok": True}
-        set_stage(2, "done")
-        add_log(f"  [✓]  ExposureCheck    {len(df):,} rows", "good")
-    except Exception as e:
-        set_stage(2, "failed"); stats[2] = {"ok": False, "error": str(e)}
-        add_log(f"  [✗]  ExposureCheck    {e}", "fail")
-
-    # Stage 3
-    set_stage(3, "active")
-    try:
-        ss, sample_summary = build_sample(frames["sample"])
-        output_sheets["Sample"] = ss
-        stats[3] = {"rows": len(ss), "matchdays": len(sample_summary), "ok": True}
-        set_stage(3, "done")
-        add_log(f"  [✓]  Sample           {len(ss):,} rows · {len(sample_summary)} matchdays", "good")
-    except Exception as e:
-        set_stage(3, "failed"); stats[3] = {"ok": False, "error": str(e)}
-        add_log(f"  [✗]  Sample           {e}", "fail")
-
-    # Stage 4
-    set_stage(4, "active")
-    try:
-        if sample_summary is None:
-            raise RuntimeError("Stage 3 must succeed before Stage 4 can run")
-        df = build_extrap_check(frames["adapt"], sample_summary)
-        output_sheets["ExtrapCheck"] = df
-        stats[4] = {"rows": len(df), "ok": True}
-        set_stage(4, "done")
-        add_log(f"  [✓]  ExtrapCheck      {len(df):,} rows", "good")
-    except RuntimeError as e:
-        set_stage(4, "skipped"); stats[4] = {"ok": False, "skipped": True, "error": str(e)}
-        add_log(f"  [⚠]  ExtrapCheck      SKIPPED — {e}", "warn")
-    except Exception as e:
-        set_stage(4, "failed"); stats[4] = {"ok": False, "error": str(e)}
-        add_log(f"  [✗]  ExtrapCheck      {e}", "fail")
-
-    add_log("", "dim")
-    add_log("── OUTPUT ────────────────────────────────────────────", "stage")
-    done = sum(1 for s in stats.values() if s.get("ok"))
-
-    if output_sheets:
+        # Stage 2
+        set_stage(2, "active")
         try:
-            st.session_state.output_bytes = write_output_styled(output_sheets)
-            add_log(f"  [✓]  {done}/4 sheets written → QC_Output.xlsx", "good")
+            df = build_exposure_check(frames["sample"], frames["matex"])
+            output_sheets["ExposureCheck"] = df
+            stats[2] = {"rows": len(df), "ok": True}
+            set_stage(2, "done")
+            add_log(f"  [✓]  ExposureCheck    {len(df):,} rows", "good")
         except Exception as e:
-            add_log(f"  [✗]  Write failed: {e}", "fail")
+            stats[2] = {"ok": False, "error": str(e)}
+            set_stage(2, "failed")
+            add_log(f"  [✗]  ExposureCheck    {e}", "fail")
 
-    add_log("", "dim")
-    if done == 4:
-        add_log("  ✓  COMPLETE — all 4 sheets written", "good")
-    elif done > 0:
-        add_log(f"  ⚠  PARTIAL — {done}/4 sheets written", "warn")
-    else:
-        add_log("  ✗  FAILED — no output written", "fail")
+        # Stage 3
+        set_stage(3, "active")
+        try:
+            ss, sample_summary = build_sample(frames["sample"])
+            output_sheets["Sample"] = ss
+            stats[3] = {"rows": len(ss), "matchdays": len(sample_summary), "ok": True}
+            set_stage(3, "done")
+            add_log(f"  [✓]  Sample           {len(ss):,} rows · {len(sample_summary)} matchdays", "good")
+        except Exception as e:
+            stats[3] = {"ok": False, "error": str(e)}
+            set_stage(3, "failed")
+            add_log(f"  [✗]  Sample           {e}", "fail")
 
-    st.session_state.result_stats = stats
+        # Stage 4
+        set_stage(4, "active")
+        try:
+            if sample_summary is None:
+                raise RuntimeError("Stage 3 must succeed before Stage 4 can run")
+            df = build_extrap_check(frames["adapt"], sample_summary)
+            output_sheets["ExtrapCheck"] = df
+            stats[4] = {"rows": len(df), "ok": True}
+            set_stage(4, "done")
+            add_log(f"  [✓]  ExtrapCheck      {len(df):,} rows", "good")
+        except RuntimeError as e:
+            stats[4] = {"ok": False, "skipped": True, "error": str(e)}
+            set_stage(4, "skipped")
+            add_log(f"  [⚠]  ExtrapCheck      SKIPPED — {e}", "warn")
+        except Exception as e:
+            stats[4] = {"ok": False, "error": str(e)}
+            set_stage(4, "failed")
+            add_log(f"  [✗]  ExtrapCheck      {e}", "fail")
+
+        add_log("", "dim")
+        add_log("── OUTPUT ────────────────────────────────────────────", "stage")
+        done = sum(1 for s in stats.values() if s.get("ok"))
+
+        if output_sheets:
+            try:
+                st.session_state.output_bytes = write_output_styled(output_sheets)
+                add_log(f"  [✓]  {done}/4 sheets written → QC_Output.xlsx", "good")
+            except Exception as e:
+                add_log(f"  [✗]  Write failed: {e}", "fail")
+
+        add_log("", "dim")
+        if done == 4:
+            add_log("  ✓  COMPLETE — all 4 sheets written", "good")
+        elif done > 0:
+            add_log(f"  ⚠  PARTIAL — {done}/4 sheets written", "warn")
+        else:
+            add_log("  ✗  FAILED — no output written", "fail")
+
+    finally:
+        # This runs on every exit path — normal completion, the early
+        # return on load failure, or (defensively) any exception that
+        # somehow escapes the try/excepts above — so pipeline_running
+        # can never get stuck True and the history entry is never
+        # skipped or duplicated regardless of how the run ended.
+        st.session_state.pipeline_running = False
+
+        if st.session_state.result_stats is not None:
+            done_final = sum(1 for s in st.session_state.result_stats.values() if s.get("ok"))
+            st.session_state.run_history.insert(0, {
+                "time": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "done": done_final,
+                "total": 4,
+                "output_bytes": st.session_state.output_bytes,
+            })
+            st.session_state.run_history = st.session_state.run_history[:5]
+
+        if live_banner_ph is not None:
+            render_banner_into(live_banner_ph)
+        if live_stage_ph is not None:
+            render_stage_stepper_into(live_stage_ph)
+        if live_log_ph is not None:
+            render_log_into(live_log_ph)
+
+        _LIVE["stage_ph"] = None
+        _LIVE["log_ph"] = None
+        _LIVE["banner_ph"] = None
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -820,12 +1104,18 @@ _html("""
         <span class="n-app-name">QC Automation Pipeline</span>
       </div>
     </div>
-    <span class="n-version">v11.2 · Media Measurement</span>
+    <span class="n-version">v7.0 · Media Measurement</span>
   </div>
 </div>
 """)
 
 _html('<div class="n-shell">')
+
+# Banner placeholder — reserved right after the topbar so a completed
+# run's pass/fail state is visible without scrolling. Populated below,
+# after Step 1's button logic runs (or on every normal rerun from
+# whatever session_state already holds).
+banner_ph = st.empty()
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 1 — SOURCE FILES
@@ -892,13 +1182,12 @@ with action_progress_col:
     </div>
     """)
 with action_btn_col:
-    if st.button(btn_label, disabled=not all_ready, use_container_width=True):
-        with st.spinner("Running…"):
-            run_pipeline(
-                uploaded["adapt"], uploaded["bsr"], uploaded["yt"],
-                uploaded["matex"], uploaded["sample"]
-            )
-        st.rerun()
+    # The click is captured here, but run_pipeline() itself isn't called
+    # until after stage_ph/log_ph below are declared — Streamlit reserves
+    # each placeholder's position in the page the moment st.empty() runs,
+    # so run_pipeline can write into them later in the script and the
+    # updates still land in the right spot (Step 2 / Step 3), not here.
+    run_clicked = st.button(btn_label, disabled=not all_ready, use_container_width=True)
 _html('</div>')
 
 _html('</div>')  # end n-section (step 1)
@@ -913,55 +1202,13 @@ _html("""
   <div class="n-step-title">Pipeline Stages</div>
 </div>
 """)
-
-STAGE_DEFS = [
-    (1, "RateCheck",     "Adapt · BSR · YT"),
-    (2, "ExposureCheck", "Sample vs Matex"),
-    (3, "Sample",        "pID · matchdays"),
-    (4, "ExtrapCheck",   "BT% / Msec%"),
-]
-
-ICON_MAP = {"idle":"—","done":"✓","active":"◎","failed":"✗","skipped":"⚠"}
-
-cols_html = ""
-for n, title, sub in STAGE_DEFS:
-    state = st.session_state.stage_states[n]
-    icon  = ICON_MAP.get(state, "—")
-
-    if state == "done" and st.session_state.result_stats:
-        s = st.session_state.result_stats.get(n, {})
-        rows = s.get("rows")
-        if rows:
-            sub = f"{rows:,} rows"
-        if n == 3 and s.get("matchdays"):
-            sub += f" · {s['matchdays']} matchdays"
-
-    cols_html += f"""
-    <div class="n-stage-col {state}">
-      <div class="n-stage-icon">{icon}</div>
-      <div class="n-stage-label">{title}</div>
-      <div class="n-stage-sub">{sub}</div>
-    </div>"""
-
-_html(f"""
-<div class="n-pipeline-bar">
-  <div class="n-stages">{cols_html}</div>
-</div>
-""")
+stage_ph = st.empty()
 _html('</div>')  # end n-section (step 2)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 3 — LOG
 # ═══════════════════════════════════════════════════════════════════════════
 _html('<div class="n-section">')
-
-done_count = sum(1 for s in (st.session_state.result_stats or {}).values() if s.get("ok"))
-if st.session_state.result_stats:
-    dot_class = "fail" if done_count == 0 else ("warn" if done_count < 4 else "done")
-elif st.session_state.log_lines:
-    dot_class = "active"
-else:
-    dot_class = ""
 
 head_col1, head_col2 = st.columns([3, 1], gap="small")
 with head_col1:
@@ -977,59 +1224,29 @@ with head_col2:
     )
 
 _html('<div style="height:18px"></div>')
-
-if st.session_state.show_logs:
-    if not st.session_state.log_lines:
-        log_content = """
-        <div class="n-empty">
-          <div class="n-empty-icon">○</div>
-          <div class="n-empty-title">No pipeline run yet</div>
-          <div class="n-empty-sub">Upload all 5 source files and press Run QC Pipeline</div>
-        </div>"""
-    else:
-        rows_html = ""
-        for stamp, text, kind in st.session_state.log_lines:
-            if text == "":
-                rows_html += '<div style="height:8px"></div>'
-            elif text.startswith("──"):
-                rows_html += f'<hr class="ll-div"><div class="ll"><span class="ll-ts">{stamp}</span><span class="ll-stage">{text}</span></div>'
-            else:
-                cls = {"ok":"ll-ok","good":"ll-good","fail":"ll-fail","warn":"ll-warn","dim":"ll-dim","head":"ll-head","stage":"ll-stage"}.get(kind,"ll-ok")
-                rows_html += f'<div class="ll"><span class="ll-ts">{stamp}</span><span class="{cls}">{text}</span></div>'
-        log_content = f'<div class="n-log-body">{rows_html}</div>'
-
-    _html(f"""
-    <div class="n-log-card">
-      <div class="n-log-header">
-        <span class="n-log-header-title">Live Output</span>
-        <div class="n-log-dot {dot_class}"></div>
-      </div>
-      {log_content}
-    </div>
-    """)
-else:
-    if not st.session_state.log_lines:
-        compact_dot, compact_text, compact_sub = "", "No pipeline run yet", "Toggle logs on for step-by-step detail"
-    elif st.session_state.result_stats and done_count == 4:
-        compact_dot, compact_text, compact_sub = "done", "Complete — all 4 sheets written", "Toggle logs on for step-by-step detail"
-    elif st.session_state.result_stats and done_count > 0:
-        compact_dot, compact_text, compact_sub = "fail", f"Partial — {done_count}/4 sheets written", "Toggle logs on to see what failed"
-    elif st.session_state.result_stats:
-        compact_dot, compact_text, compact_sub = "fail", "Failed — no output written", "Toggle logs on to see what failed"
-    else:
-        compact_dot, compact_text, compact_sub = "active", "Running…", "Toggle logs on for step-by-step detail"
-
-    _html(f"""
-    <div class="n-log-compact">
-      <div class="n-log-compact-dot {compact_dot}"></div>
-      <div>
-        <div class="n-log-compact-text">{compact_text}</div>
-        <div class="n-log-compact-sub">{compact_sub}</div>
-      </div>
-    </div>
-    """)
-
+log_ph = st.empty()
 _html('</div>')  # end n-section (step 3)
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Run the pipeline now, if the button was clicked — using the
+# placeholders declared above so results appear live, stage by stage,
+# in their correct positions on the page rather than all at once.
+# ═══════════════════════════════════════════════════════════════════════════
+if run_clicked:
+    run_pipeline(
+        uploaded["adapt"], uploaded["bsr"], uploaded["yt"],
+        uploaded["matex"], uploaded["sample"],
+        live_stage_ph=stage_ph, live_log_ph=log_ph, live_banner_ph=banner_ph,
+    )
+    st.rerun()
+
+# Always render current state into the three placeholders above — this
+# is what covers page load, and reruns triggered by something other than
+# the Run button (e.g. toggling "Show logs"), where run_pipeline() never
+# executes this script pass at all.
+render_banner_into(banner_ph)
+render_stage_stepper_into(stage_ph)
+render_log_into(log_ph)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STEP 4 — OUTPUT
@@ -1042,7 +1259,7 @@ if st.session_state.result_stats:
             _html("""
             <div class="n-step-head" style="margin-bottom:0;">
               <div class="n-step-num">4</div>
-              <div class="n-step-title">Results</div>
+              <div class="n-step-title">Output Sheets</div>
             </div>
             """)
         with res_head_col2:
@@ -1069,6 +1286,7 @@ if st.session_state.result_stats:
             cls     = "ok" if ok else ("skip" if skipped else "fail")
             icon    = "✓" if ok else ("⚠" if skipped else "✗")
             rows    = s.get("rows")
+            err_html = ""
             if ok:
                 sub = f"{rows:,} rows" if rows else "complete"
                 if i == 3 and s.get("matchdays"): sub += f"<br>{s['matchdays']} matchdays"
@@ -1076,15 +1294,70 @@ if st.session_state.result_stats:
                 sub = "Stage 3 required"
             else:
                 sub = "See log above"
+                raw_err = s.get("error", "")
+                if raw_err:
+                    safe_err = html_lib.escape(raw_err)[:90]
+                    if len(raw_err) > 90:
+                        safe_err += "…"
+                    err_html = f'<div class="n-rc-err">{safe_err}</div>'
 
             cards_html += f"""
             <div class="n-result-card {cls}">
               <div class="n-rc-name">{sname}</div>
               <div class="n-rc-stat">{icon}</div>
               <div class="n-rc-sub">{sub}</div>
+              {err_html}
             </div>"""
 
         _html(f'<div class="n-result-grid">{cards_html}</div>')
     _html('</div>')  # end n-section (step 4)
 
+# ═══════════════════════════════════════════════════════════════════════════
+# STEP 5 — RUN HISTORY
+# ═══════════════════════════════════════════════════════════════════════════
+if st.session_state.run_history:
+    _html('<div class="n-section">')
+    _html("""
+    <div class="n-step-head">
+      <div class="n-step-num">5</div>
+      <div class="n-step-title">Run History</div>
+    </div>
+    <div class="n-step-sub">Last 5 runs this session</div>
+    """)
+    with st.container(key="run_history", border=True):
+        for idx, run in enumerate(st.session_state.run_history):
+            done, total = run["done"], run["total"]
+            if done == total:
+                dcls, dtext = "pass", f"{done}/{total} passed"
+            elif done > 0:
+                dcls, dtext = "partial", f"{done}/{total} passed — partial"
+            else:
+                dcls, dtext = "fail", f"{done}/{total} passed — failed"
+
+            row_col1, row_col2 = st.columns([4, 1], gap="small")
+            with row_col1:
+                _html(f"""
+                <div class="n-history-row" style="border-bottom:none; padding-bottom:0;">
+                  <div class="n-history-left">
+                    <div class="n-history-dot {dcls}"></div>
+                    <div>
+                      <div class="n-history-time">{run['time']}</div>
+                      <div class="n-history-status">{dtext}</div>
+                    </div>
+                  </div>
+                </div>
+                """)
+            with row_col2:
+                if run.get("output_bytes"):
+                    st.download_button(
+                        "↓", data=run["output_bytes"],
+                        file_name=f"QC_Output_{run['time'].replace(':','').replace(' ','_').replace('-','')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key=f"hist_dl_{idx}", use_container_width=True,
+                    )
+            if idx < len(st.session_state.run_history) - 1:
+                _html('<hr class="ll-div" style="border-top:1px solid var(--n-line-soft); margin:2px 0 10px;">')
+    _html('</div>')  # end n-section (step 5)
+
 _html('</div>')  # end n-shell
+
