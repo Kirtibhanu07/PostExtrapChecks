@@ -567,7 +567,7 @@ footer, #MainMenu { display: none !important; }
     box-shadow: 0 2px 6px rgba(32,28,44,0.05), 0 8px 24px rgba(32,28,44,0.04) !important;
 }
 .st-key-output_results > div {
-    padding: 30px 34px !important;
+    padding: 20px 24px !important;
     gap: 0 !important;
 }
 
