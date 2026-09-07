@@ -211,18 +211,23 @@ footer, #MainMenu { display: none !important; }
 .n-section { margin-bottom: 40px; }
 
 /* ═══ UPLOAD GRID ═══ */
-.n-upload-card {
-    background: var(--n-panel);
-    border: 1px solid var(--n-line);
-    border-radius: 12px;
-    padding: 16px 16px 14px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    transition: border-color 0.2s, box-shadow 0.2s;
+/* Each card is a real st.container(border=True) — an actual DOM parent
+   Streamlit nests the header, uploader, and status line inside — not the
+   old "open a <div>, render a widget, close the <div> in a separate
+   st.markdown() call" trick. That trick never worked: three separate
+   st.markdown()/st.file_uploader() calls become three separate sibling
+   DOM nodes, not one nested box, regardless of what the raw HTML string
+   said. That's what caused the floating/overlapping borders. */
+[data-testid="column"] [data-testid="stVerticalBlockBorderWrapper"] {
+    border: 1px solid var(--n-line) !important;
+    border-radius: 12px !important;
+    background: var(--n-panel) !important;
 }
 
-.n-upload-card.is-loaded { border-color: rgba(31,157,108,0.35); box-shadow: 0 2px 8px rgba(31,157,108,0.07); }
+[data-testid="column"] [data-testid="stVerticalBlockBorderWrapper"] > div {
+    padding: 14px 16px 16px !important;
+    gap: 10px !important;
+}
 
 .n-upload-card-head {
     display: flex;
@@ -232,87 +237,65 @@ footer, #MainMenu { display: none !important; }
 }
 
 .n-upload-name { font-size: 13px; font-weight: 700; color: var(--n-ink); }
-.n-upload-hint { font-size: 10.5px; color: var(--n-ink-faint); font-family: 'Inter', monospace; margin-bottom: 10px; }
+.n-upload-hint { font-size: 10.5px; color: var(--n-ink-faint); font-family: 'Inter', monospace; margin-bottom: 6px; }
 
 .n-upload-dot { width: 7px; height: 7px; border-radius: 50%; background: #E4E1EC; flex-shrink: 0; }
 .n-upload-dot.loaded { background: var(--n-good); box-shadow: 0 0 0 3px rgba(31,157,108,0.15); }
 
 .n-upload-status {
-    margin-top: 10px;
+    margin-top: 4px;
     font-size: 11px;
     font-weight: 600;
     color: var(--n-ink-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .n-upload-status.loaded { color: var(--n-good); }
 
-/* Compact uploader inside the card */
-.n-upload-card [data-testid="stFileUploader"] { background: transparent !important; margin: 0 !important; padding: 0 !important; }
-.n-upload-card [data-testid="stFileUploader"] section { padding: 0 !important; }
-.n-upload-card [data-testid="stFileUploaderDropzoneInstructions"] { display: none !important; }
+/* The uploader widget itself — kept compact, no wasted margin */
+[data-testid="stFileUploader"] { background: transparent !important; margin: 0 !important; padding: 0 !important; }
+[data-testid="stFileUploaderDropzoneInstructions"] { display: none !important; }
 
-/* Dropzone — cover both current and legacy Streamlit test-ids so styling
-   never silently fails to match on a different Streamlit version.
-   The whole dropzone area is natively clickable to open the file picker,
-   so we hide Streamlit's own "Browse files" button entirely below rather
-   than fight its cross-version markup/testids — one less thing that can
-   render as an unstyled box in front of executives. */
-[data-testid="stFileUploaderDropzone"],
-[data-testid="stFileUploader"] section {
+/* Streamlit's own "file attached" chip is unstyled and version-fragile —
+   we already render our own status line above from data we control
+   (uf.name, uf.size) directly in Python, so hide Streamlit's copy of
+   this entirely rather than try to restyle something we can't verify
+   the markup of. Unconditional, not state-dependent — no CSS selector
+   has to correctly detect "a file is present" for this to be safe. */
+[data-testid="stFileUploaderFile"] { display: none !important; }
+
+/* Dropzone: a small, quiet, always-clickable target. No text of our own
+   layered on top of it via ::after — that requires CSS to correctly
+   detect upload state, which is exactly the kind of guess that broke
+   last time. The dropzone's only job now is "looks clickable"; the
+   status line above is the single source of truth for state. */
+[data-testid="stFileUploaderDropzone"] {
     background: #FBFAF8 !important;
     border: 1.5px dashed #DDD7EE !important;
     border-radius: 8px !important;
-    padding: 14px 12px !important;
-    min-height: unset !important;
+    padding: 8px !important;
+    min-height: 30px !important;
+    height: 30px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     transition: border-color 0.2s, background 0.2s !important;
     cursor: pointer !important;
-    position: relative !important;
+    overflow: hidden !important;
 }
 
-[data-testid="stFileUploaderDropzone"]:hover,
-[data-testid="stFileUploader"] section:hover {
+[data-testid="stFileUploaderDropzone"]:hover {
     border-color: var(--n-violet) !important;
     background: var(--n-violet-wash) !important;
 }
 
-[data-testid="stFileUploaderFileName"] { color: var(--n-ink) !important; font-size: 10.5px !important; font-weight: 500 !important; }
-
-/* Hide Streamlit's native Browse button and any icon/instruction text —
-   the dropzone itself already opens the file picker on click. */
-.n-upload-card [data-testid="stFileUploader"] button,
-.n-upload-card [data-testid="stFileUploaderDropzone"] button,
-.n-upload-card [data-testid="baseButton-secondary"],
-.n-upload-card [data-testid="stBaseButton-secondary"] {
+/* Hide Streamlit's native Browse button — the whole dropzone area
+   above is already clickable to open the file picker. */
+[data-testid="stFileUploaderDropzone"] button {
     visibility: hidden !important;
     position: absolute !important;
-    width: 1px !important;
-    height: 1px !important;
     pointer-events: none !important;
-}
-
-/* Our own deterministic label — pure CSS, cannot break across
-   Streamlit versions since it doesn't depend on matching their DOM */
-[data-testid="stFileUploaderDropzone"]::after,
-[data-testid="stFileUploader"] section::after {
-    content: 'Click or drop .xlsx here';
-    font-size: 11px;
-    font-weight: 500;
-    color: var(--n-ink-faint);
-    pointer-events: none;
-}
-
-[data-testid="stFileUploaderDropzone"]:hover::after,
-[data-testid="stFileUploader"] section:hover::after {
-    color: var(--n-violet-dark);
-}
-
-/* Once a file is attached, Streamlit swaps the dropzone for a file-row —
-   don't show our upload prompt over an already-uploaded file's row */
-[data-testid="stFileUploaderFile"] ~ *::after,
-[data-testid="stFileUploaderDropzone"]:has([data-testid="stFileUploaderFile"])::after {
-    content: '' !important;
 }
 
 /* ═══ ACTION ROW (progress + run button) ═══ */
@@ -420,6 +403,33 @@ footer, #MainMenu { display: none !important; }
 
 .n-toggle-wrap [data-testid="stWidgetLabel"] p { font-size: 11.5px !important; font-weight: 600 !important; color: var(--n-ink-soft) !important; }
 
+/* Show-logs checkbox — a plain native checkbox, deliberately not
+   restyled. Streamlit's checkbox internals vary by version and our
+   earlier global reset (margin/padding: 0 on every element) is exactly
+   what silently crushed the previous custom toggle-switch down to
+   invisible. A native checkbox can't disappear that way — it has its
+   own browser-drawn box that isn't affected by our CSS reset. */
+[data-testid="stCheckbox"] {
+    display: flex !important;
+    justify-content: flex-end !important;
+    padding-top: 4px !important;
+}
+[data-testid="stCheckbox"] label {
+    display: flex !important;
+    flex-direction: row-reverse !important;
+    align-items: center !important;
+    gap: 8px !important;
+    cursor: pointer !important;
+}
+[data-testid="stCheckbox"] label p {
+    font-size: 12.5px !important;
+    font-weight: 600 !important;
+    color: var(--n-ink-soft) !important;
+}
+[data-testid="stCheckbox"] label span[data-baseweb] {
+    transform: scale(1.15);
+}
+
 .n-log-card { background: var(--n-midnight); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(32,28,44,0.03); }
 
 .n-log-header {
@@ -451,7 +461,7 @@ footer, #MainMenu { display: none !important; }
 .n-log-body::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
 .n-log-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
 
-.ll { display: flex; gap: 12px; }
+.ll { display: flex; gap: 14px; padding: 3px 0; }
 .ll-ts { color: rgba(255,255,255,0.22); flex-shrink: 0; }
 .ll-ok   { color: #8FB8FF; }
 .ll-good { color: #5CDDA0; }
@@ -460,7 +470,7 @@ footer, #MainMenu { display: none !important; }
 .ll-dim  { color: rgba(255,255,255,0.2); }
 .ll-head { color: #B296FF; font-weight: 600; }
 .ll-stage { color: rgba(255,255,255,0.35); }
-.ll-div { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 6px 0; }
+.ll-div { border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 12px 0; }
 
 .n-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 50px 40px; text-align: center; }
 .n-empty-icon { font-size: 24px; opacity: 0.5; color: var(--n-violet); }
@@ -770,28 +780,27 @@ upload_cols = st.columns(5, gap="small")
 
 for col, (key, label, hint) in zip(upload_cols, FILE_DEFS):
     with col:
-        uf = st.session_state.get(f"upload_{key}")
-        loaded_now = uf is not None
-        _html(f'<div class="n-upload-card{" is-loaded" if loaded_now else ""}">')
-        _html(f"""
-        <div class="n-upload-card-head">
-          <span class="n-upload-name">{label}</span>
-          <div class="n-upload-dot{' loaded' if loaded_now else ''}"></div>
-        </div>
-        <div class="n-upload-hint">sheet: {hint}</div>
-        """)
-        uf = st.file_uploader(
-            label, type=["xlsx"], key=f"upload_{key}",
-            help=f"Sheet: {hint}", label_visibility="collapsed",
-        )
-        uploaded[key] = uf
-        if uf:
-            loaded_count += 1
-            status_txt = f"✓ {uf.size/1024:.0f} KB"
-        else:
-            status_txt = "Awaiting upload"
-        _html(f'<div class="n-upload-status{" loaded" if uf else ""}">{status_txt}</div>')
-        _html('</div>')
+        with st.container(border=True):
+            uf = st.session_state.get(f"upload_{key}")
+            loaded_now = uf is not None
+            _html(f"""
+            <div class="n-upload-card-head">
+              <span class="n-upload-name">{label}</span>
+              <div class="n-upload-dot{' loaded' if loaded_now else ''}"></div>
+            </div>
+            <div class="n-upload-hint">sheet: {hint}</div>
+            """)
+            uf = st.file_uploader(
+                label, type=["xlsx"], key=f"upload_{key}",
+                help=f"Sheet: {hint}", label_visibility="collapsed",
+            )
+            uploaded[key] = uf
+            if uf:
+                loaded_count += 1
+                status_txt = f"✓  {uf.name}  ·  {uf.size/1024:.0f} KB"
+            else:
+                status_txt = "Awaiting upload"
+            _html(f'<div class="n-upload-status{" loaded" if uf else ""}">{status_txt}</div>')
 
 # Action row — progress + run button
 pct = int(loaded_count / 5 * 100)
@@ -885,11 +894,9 @@ with head_col1:
     </div>
     """)
 with head_col2:
-    _html('<div class="n-toggle-wrap" style="display:flex; justify-content:flex-end;">')
-    st.session_state.show_logs = st.toggle(
-        "Show logs", value=st.session_state.show_logs, key="show_logs_toggle",
+    st.session_state.show_logs = st.checkbox(
+        "Show logs", value=st.session_state.show_logs, key="show_logs_checkbox",
     )
-    _html('</div>')
 
 _html('<div style="height:18px"></div>')
 
@@ -905,7 +912,7 @@ if st.session_state.show_logs:
         rows_html = ""
         for stamp, text, kind in st.session_state.log_lines:
             if text == "":
-                rows_html += '<div style="height:3px"></div>'
+                rows_html += '<div style="height:8px"></div>'
             elif text.startswith("──"):
                 rows_html += f'<hr class="ll-div"><div class="ll"><span class="ll-ts">{stamp}</span><span class="ll-stage">{text}</span></div>'
             else:
