@@ -1068,7 +1068,7 @@ _html("""
         <span class="n-app-name">QC Automation Pipeline</span>
       </div>
     </div>
-    <span class="n-version">v7.0 · Media Measurement</span>
+    <span class="n-version">v8.4 · Media Measurement</span>
   </div>
 </div>
 """)
