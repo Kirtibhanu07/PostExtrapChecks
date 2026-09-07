@@ -567,7 +567,7 @@ footer, #MainMenu { display: none !important; }
     box-shadow: 0 2px 6px rgba(32,28,44,0.05), 0 8px 24px rgba(32,28,44,0.04) !important;
 }
 .st-key-output_results > div {
-    padding: 8px 5px !important;
+    padding: 30px 34px !important;
     gap: 0 !important;
 }
 
@@ -820,7 +820,7 @@ _html("""
         <span class="n-app-name">QC Automation Pipeline</span>
       </div>
     </div>
-    <span class="n-version">v11.2 · Media Measurement</span>
+    <span class="n-version">v7.0 · Media Measurement</span>
   </div>
 </div>
 """)
@@ -1042,7 +1042,7 @@ if st.session_state.result_stats:
             _html("""
             <div class="n-step-head" style="margin-bottom:0;">
               <div class="n-step-num">4</div>
-              <div class="n-step-title">Results</div>
+              <div class="n-step-title">Output Sheets</div>
             </div>
             """)
         with res_head_col2:
