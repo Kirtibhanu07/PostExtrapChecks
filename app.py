@@ -122,15 +122,17 @@ footer, #MainMenu { display: none !important; }
 
 /* ═══ TOPBAR ═══ */
 .n-topbar-outer {
-    background: linear-gradient(100deg, var(--n-midnight) 0%, var(--n-midnight-2) 100%);
-    border-bottom: 3px solid var(--n-violet);
+    background: radial-gradient(ellipse 900px 200px at 15% 0%, rgba(110,55,250,0.28), transparent 60%),
+                linear-gradient(100deg, var(--n-midnight) 0%, var(--n-midnight-2) 100%);
+    border-bottom: 3px solid transparent;
+    border-image: linear-gradient(90deg, var(--n-violet) 0%, #9B7CFA 45%, #4ECDC4 100%) 1;
     margin-bottom: 44px;
 }
 
 .n-topbar {
     max-width: var(--n-maxw);
     margin: 0 auto;
-    height: 76px;
+    height: 80px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -140,27 +142,31 @@ footer, #MainMenu { display: none !important; }
 .n-topbar-left { display: flex; align-items: center; gap: 16px; }
 
 .n-mark {
-    width: 34px; height: 34px;
-    border-radius: 9px;
-    background: var(--n-violet);
+    width: 38px; height: 38px;
+    border-radius: 11px;
+    background: linear-gradient(135deg, var(--n-violet) 0%, var(--n-violet-dark) 100%);
     display: flex; align-items: center; justify-content: center;
-    font-family: 'Fraunces', serif;
-    font-style: italic;
-    font-weight: 700;
-    font-size: 17px;
-    color: #FFFFFF;
     flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(110,55,250,0.35), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.n-mark-play {
+    width: 0; height: 0;
+    border-top: 6px solid transparent;
+    border-bottom: 6px solid transparent;
+    border-left: 10px solid #FFFFFF;
+    margin-left: 3px;
 }
 
 .n-topbar-text { display: flex; flex-direction: column; gap: 2px; }
 
 .n-wordmark {
     font-family: 'Fraunces', serif;
-    font-size: 17px;
+    font-size: 19px;
     font-weight: 600;
     font-style: italic;
     color: #FFFFFF;
-    letter-spacing: -0.1px;
+    letter-spacing: -0.2px;
     line-height: 1;
 }
 
@@ -214,18 +220,22 @@ footer, #MainMenu { display: none !important; }
 /* Each card is a real st.container(border=True) — an actual DOM parent
    Streamlit nests the header, uploader, and status line inside — not the
    old "open a <div>, render a widget, close the <div> in a separate
-   st.markdown() call" trick. That trick never worked: three separate
-   st.markdown()/st.file_uploader() calls become three separate sibling
-   DOM nodes, not one nested box, regardless of what the raw HTML string
-   said. That's what caused the floating/overlapping borders. */
+   st.markdown() call" trick, which produced three disconnected sibling
+   nodes instead of one box. */
 [data-testid="column"] [data-testid="stVerticalBlockBorderWrapper"] {
     border: 1px solid var(--n-line) !important;
-    border-radius: 12px !important;
+    border-radius: 14px !important;
     background: var(--n-panel) !important;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+[data-testid="column"] [data-testid="stVerticalBlockBorderWrapper"]:hover {
+    border-color: #D8D2EE !important;
+    box-shadow: 0 4px 14px rgba(32,28,44,0.05) !important;
 }
 
 [data-testid="column"] [data-testid="stVerticalBlockBorderWrapper"] > div {
-    padding: 14px 16px 16px !important;
+    padding: 16px 18px 18px !important;
     gap: 10px !important;
 }
 
@@ -233,17 +243,17 @@ footer, #MainMenu { display: none !important; }
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
-.n-upload-name { font-size: 13px; font-weight: 700; color: var(--n-ink); }
-.n-upload-hint { font-size: 10.5px; color: var(--n-ink-faint); font-family: 'Inter', monospace; margin-bottom: 6px; }
+.n-upload-name { font-size: 13.5px; font-weight: 700; color: var(--n-ink); letter-spacing: -0.1px; }
+.n-upload-hint { font-size: 10.5px; color: var(--n-ink-faint); font-family: 'Inter', monospace; margin-bottom: 4px; }
 
 .n-upload-dot { width: 7px; height: 7px; border-radius: 50%; background: #E4E1EC; flex-shrink: 0; }
 .n-upload-dot.loaded { background: var(--n-good); box-shadow: 0 0 0 3px rgba(31,157,108,0.15); }
 
 .n-upload-status {
-    margin-top: 4px;
+    margin-top: 6px;
     font-size: 11px;
     font-weight: 600;
     color: var(--n-ink-faint);
@@ -253,36 +263,34 @@ footer, #MainMenu { display: none !important; }
 }
 .n-upload-status.loaded { color: var(--n-good); }
 
-/* The uploader widget itself — kept compact, no wasted margin */
+/* The uploader widget itself — we do NOT hide its native content this
+   time. Hiding the icon/text/button left a blank, undiscoverable box
+   (that was the previous regression). config.toml now themes Streamlit's
+   own components in Nielsen violet natively, so the native drag-drop
+   text and Browse button are safe to just show — properly colored,
+   guaranteed present, no CSS guessing about internal markup required. */
 [data-testid="stFileUploader"] { background: transparent !important; margin: 0 !important; padding: 0 !important; }
-[data-testid="stFileUploaderDropzoneInstructions"] { display: none !important; }
 
-/* Streamlit's own "file attached" chip is unstyled and version-fragile —
-   we already render our own status line above from data we control
-   (uf.name, uf.size) directly in Python, so hide Streamlit's copy of
-   this entirely rather than try to restyle something we can't verify
-   the markup of. Unconditional, not state-dependent — no CSS selector
-   has to correctly detect "a file is present" for this to be safe. */
-[data-testid="stFileUploaderFile"] { display: none !important; }
+[data-testid="stFileUploaderDropzoneInstructions"] {
+    padding: 4px 0 !important;
+}
+[data-testid="stFileUploaderDropzoneInstructions"] span {
+    font-size: 11px !important;
+    color: var(--n-ink-faint) !important;
+}
+[data-testid="stFileUploaderDropzoneInstructions"] small {
+    font-size: 9.5px !important;
+    color: var(--n-ink-faint) !important;
+    opacity: 0.7;
+}
 
-/* Dropzone: a small, quiet, always-clickable target. No text of our own
-   layered on top of it via ::after — that requires CSS to correctly
-   detect upload state, which is exactly the kind of guess that broke
-   last time. The dropzone's only job now is "looks clickable"; the
-   status line above is the single source of truth for state. */
 [data-testid="stFileUploaderDropzone"] {
     background: #FBFAF8 !important;
     border: 1.5px dashed #DDD7EE !important;
     border-radius: 8px !important;
-    padding: 8px !important;
-    min-height: 30px !important;
-    height: 30px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+    padding: 10px 12px !important;
+    min-height: unset !important;
     transition: border-color 0.2s, background 0.2s !important;
-    cursor: pointer !important;
-    overflow: hidden !important;
 }
 
 [data-testid="stFileUploaderDropzone"]:hover {
@@ -290,12 +298,18 @@ footer, #MainMenu { display: none !important; }
     background: var(--n-violet-wash) !important;
 }
 
-/* Hide Streamlit's native Browse button — the whole dropzone area
-   above is already clickable to open the file picker. */
+/* Once a file is attached, Streamlit's own file chip is redundant with
+   our status line below (which we build from uf.name / uf.size that we
+   already control) — hide only that specific chip, not the whole
+   dropzone or its browse affordance. */
+[data-testid="stFileUploaderFile"] { display: none !important; }
+
+/* Cosmetic-only size nudge — no color, no hide, so even if this
+   selector doesn't match some future Streamlit version, worst case is
+   a default-sized (still fully visible, still working) button. */
 [data-testid="stFileUploaderDropzone"] button {
-    visibility: hidden !important;
-    position: absolute !important;
-    pointer-events: none !important;
+    transform: scale(0.82);
+    transform-origin: left center;
 }
 
 /* ═══ ACTION ROW (progress + run button) ═══ */
@@ -308,6 +322,7 @@ footer, #MainMenu { display: none !important; }
     border-radius: 14px;
     padding: 22px 28px;
     margin-top: 16px;
+    box-shadow: 0 2px 6px rgba(32,28,44,0.05), 0 8px 24px rgba(32,28,44,0.04);
 }
 
 .n-action-progress { flex: 1; }
@@ -349,7 +364,7 @@ footer, #MainMenu { display: none !important; }
 }
 
 /* ═══ PIPELINE STEPPER ═══ */
-.n-pipeline-bar { background: var(--n-panel); border: 1px solid var(--n-line); border-radius: 14px; padding: 30px 34px; box-shadow: 0 1px 2px rgba(32,28,44,0.03); }
+.n-pipeline-bar { background: var(--n-panel); border: 1px solid var(--n-line); border-radius: 14px; padding: 30px 34px; box-shadow: 0 2px 6px rgba(32,28,44,0.05), 0 8px 24px rgba(32,28,44,0.04); }
 
 .n-stages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; position: relative; }
 
@@ -403,12 +418,11 @@ footer, #MainMenu { display: none !important; }
 
 .n-toggle-wrap [data-testid="stWidgetLabel"] p { font-size: 11.5px !important; font-weight: 600 !important; color: var(--n-ink-soft) !important; }
 
-/* Show-logs checkbox — a plain native checkbox, deliberately not
-   restyled. Streamlit's checkbox internals vary by version and our
-   earlier global reset (margin/padding: 0 on every element) is exactly
-   what silently crushed the previous custom toggle-switch down to
-   invisible. A native checkbox can't disappear that way — it has its
-   own browser-drawn box that isn't affected by our CSS reset. */
+/* Show-logs checkbox — deliberately minimal CSS. Its color now comes
+   from config.toml's primaryColor (Streamlit's own theme engine colors
+   its native checkbox correctly by design), so we only touch layout —
+   never the checkbox's own box/checkmark, which is what broke last
+   time when transform/reset rules hit internals we couldn't verify. */
 [data-testid="stCheckbox"] {
     display: flex !important;
     justify-content: flex-end !important;
@@ -426,11 +440,8 @@ footer, #MainMenu { display: none !important; }
     font-weight: 600 !important;
     color: var(--n-ink-soft) !important;
 }
-[data-testid="stCheckbox"] label span[data-baseweb] {
-    transform: scale(1.15);
-}
 
-.n-log-card { background: var(--n-midnight); border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgba(32,28,44,0.03); }
+.n-log-card { background: var(--n-midnight); border-radius: 14px; overflow: hidden; box-shadow: 0 2px 6px rgba(32,28,44,0.05), 0 8px 24px rgba(32,28,44,0.04); }
 
 .n-log-header {
     padding: 16px 24px;
@@ -741,7 +752,7 @@ _html("""
 <div class="n-topbar-outer">
   <div class="n-topbar">
     <div class="n-topbar-left">
-      <div class="n-mark">N</div>
+      <div class="n-mark"><div class="n-mark-play"></div></div>
       <div class="n-topbar-text">
         <span class="n-wordmark">Nielsen</span>
         <span class="n-app-name">QC Automation Pipeline</span>
