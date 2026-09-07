@@ -583,7 +583,7 @@ footer, #MainMenu { display: none !important; }
     box-shadow: 0 2px 6px rgba(32,28,44,0.05), 0 8px 24px rgba(32,28,44,0.04) !important;
 }
 .st-key-output_results > div {
-    padding: 30px 34px !important;
+    padding: 5px 8px !important;
     gap: 0 !important;
 }
 
@@ -773,7 +773,7 @@ def render_log_into(ph):
             <div class="n-empty">
               <div class="n-empty-icon">○</div>
               <div class="n-empty-title">No pipeline run yet</div>
-              <div class="n-empty-sub">Upload all 5 source files and press Run QC Pipeline</div>
+              <div class="n-empty-sub">Upload all 5 source files and press Run Pipeline</div>
             </div>"""
         else:
             rows_html = ""
@@ -1132,7 +1132,7 @@ for col, (key, label, hint) in zip(upload_cols, FILE_DEFS):
 # Action row — progress + run button
 pct = int(loaded_count / 5 * 100)
 all_ready = loaded_count == 5
-btn_label = "Run QC Pipeline →" if all_ready else f"Waiting for {5 - loaded_count} more file{'s' if 5-loaded_count != 1 else ''}"
+btn_label = "Run Pipeline →" if all_ready else f"Waiting for {5 - loaded_count} more file{'s' if 5-loaded_count != 1 else ''}"
 
 _html('<div class="n-action-row">')
 action_progress_col, action_btn_col = st.columns([2.2, 1], gap="medium")
@@ -1226,7 +1226,7 @@ if st.session_state.result_stats:
             _html("""
             <div class="n-step-head" style="margin-bottom:0;">
               <div class="n-step-num">4</div>
-              <div class="n-step-title">Output Sheets</div>
+              <div class="n-step-title">Results</div>
             </div>
             """)
         with res_head_col2:
