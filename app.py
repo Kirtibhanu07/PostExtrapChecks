@@ -1082,7 +1082,7 @@ def run_pipeline(adapt_f, bsr_f, yt_f, matex_f, sample_f,
             ("bsr",    bsr_f,    SHEETS["bsr"],    5, "BSR"),
             ("yt",     yt_f,     SHEETS["yt"],     0, "YouTube MM"),
             ("matex",  matex_f,  SHEETS["matex"],  0, "Matex"),
-            ("sample", sample_f, SHEETS["sample"], 0, "Sample"),
+            ("sample", sample_f, SHEETS["sample"], 0, "Sample/"),
         ]:
             try:
                 buf = io.BytesIO(uf.read())
